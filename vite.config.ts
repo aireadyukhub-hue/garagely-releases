@@ -10,9 +10,11 @@ export default defineConfig({
     },
   },
   base: './',
+  publicDir: 'public',
   build: {
     outDir: 'dist',
-    emptyOutDir: true,
+    emptyOutDir: false, // Don't empty — avoids unlink permission errors on some filesystems
+    sourcemap: false,
   },
   server: {
     port: 5173,
