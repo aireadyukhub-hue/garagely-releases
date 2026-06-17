@@ -1,0 +1,7 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(60,60)">
+    <polygon points="0,-50 43.3,-25 43.3,25 0,50 -43.3,25 -43.3,-25" fill="#1F6FEB"/>
+    <polygon points="0,-26 22.5,-13 22.5,13 0,26 -22.5,13 -22.5,-13" fill="#FFFFFF"/>
+    <text x="0" y="11" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="33" font-weight="600" fill="#1F6FEB">G</text>
+  </g>
+</svg>
