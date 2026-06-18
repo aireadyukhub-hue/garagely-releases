@@ -66,6 +66,20 @@ const api = {
   // Settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   updateSettings: (data: unknown) => ipcRenderer.invoke('settings:update', data),
+
+  // Licence
+  getLicence: () => ipcRenderer.invoke('licence:get'),
+  activateLicence: (key: string) => ipcRenderer.invoke('licence:activate', key),
+  deactivateLicence: () => ipcRenderer.invoke('licence:deactivate'),
+
+  // Auto-update
+  installUpdate: () => ipcRenderer.invoke('update:installNow'),
+  onUpdateAvailable: (cb: (v: { version: string }) => void) => {
+    ipcRenderer.on('update:available', (_e, v) => cb(v))
+  },
+  onUpdateDownloaded: (cb: (v: { version: string }) => void) => {
+    ipcRenderer.on('update:downloaded', (_e, v) => cb(v))
+  },
 }
 
 contextBridge.exposeInMainWorld('api', api)

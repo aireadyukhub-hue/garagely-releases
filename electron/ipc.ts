@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
-import Database from 'better-sqlite3'
+import { WDB } from './db-wrapper'
 
-export function registerIpcHandlers(db: Database.Database) {
+export function registerIpcHandlers(db: WDB) {
   // ─── Settings ───────────────────────────────────────────────────────────
   ipcMain.handle('settings:get', () => {
     return db.prepare('SELECT * FROM settings WHERE id = 1').get()

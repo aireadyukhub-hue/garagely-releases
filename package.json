@@ -17,22 +17,23 @@
   "author": "Garagely",
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^9.4.3",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "electron-updater": "^6.3.4",
     "lucide-react": "^0.400.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.23.1",
     "recharts": "^2.12.7",
+    "sql.js": "^1.10.0",
     "tailwind-merge": "^2.3.0",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.10",
     "@types/node": "^20.14.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/sql.js": "^1.4.9",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.19",
     "concurrently": "^8.2.2",
@@ -43,7 +44,6 @@
     "tailwindcss": "^3.4.4",
     "typescript": "^5.4.5",
     "vite": "^5.3.1",
-    "@vitejs/plugin-react": "^4.3.0",
     "wait-on": "^7.2.0"
   },
   "build": {
@@ -56,14 +56,17 @@
       "dist/**/*",
       "dist-electron/**/*",
       "assets/**/*",
-      "node_modules/better-sqlite3/**/*"
+      "node_modules/sql.js/**/*"
     ],
     "mac": {
       "icon": "build/icon.icns",
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ]
     },
@@ -72,13 +75,27 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "aireadyukhub-hue",
+      "repo": "garagely-releases",
+      "private": false
     }
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true,
+    "electron@31.7.7": true,
+    "esbuild@0.21.5": true,
+    "@esbuild/darwin-arm64@0.21.5": true
   }
 }

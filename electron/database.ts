@@ -1,10 +1,9 @@
-import Database from 'better-sqlite3'
 import path from 'path'
-import fs from 'fs'
+import { WDB, openDB } from './db-wrapper'
 
-export function initDatabase(userDataPath: string): Database.Database {
+export async function initDatabase(userDataPath: string): Promise<WDB> {
   const dbPath = path.join(userDataPath, 'garagely.db')
-  const db = new Database(dbPath)
+  const db = await openDB(dbPath)
 
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
@@ -15,7 +14,7 @@ export function initDatabase(userDataPath: string): Database.Database {
   return db
 }
 
-function createSchema(db: Database.Database) {
+function createSchema(db: WDB) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY DEFAULT 1,
@@ -184,7 +183,7 @@ function createSchema(db: Database.Database) {
   `)
 }
 
-function seedIfEmpty(db: Database.Database) {
+function seedIfEmpty(db: WDB) {
   const count = (db.prepare('SELECT COUNT(*) as c FROM customers').get() as { c: number }).c
   if (count > 0) return
 
