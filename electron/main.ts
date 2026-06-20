@@ -6,7 +6,10 @@ import { registerIpcHandlers } from './ipc'
 import { initLicencePath, checkLicenceOnStartup, activateLicence, clearLocalLicence } from './licence'
 import type { LicenceInfo } from './licence'
 
-const isDev = process.env.NODE_ENV !== 'production'
+// Only use the Vite dev server when explicitly running `npm run dev` (which
+// sets NODE_ENV=development). A packaged build has no NODE_ENV, so it always
+// loads its bundled files — never the dev server (which caused the blank screen).
+const isDev = process.env.NODE_ENV === 'development' && !app.isPackaged
 
 let mainWindow: BrowserWindow | null = null
 let currentLicence: LicenceInfo | null = null

@@ -3,7 +3,18 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      // Electron loads the built app from file://, where Vite's `crossorigin`
+      // attribute makes Chromium block the JS bundle (CORB) → blank screen.
+      // Strip it so the packaged app's scripts/styles load locally.
+      name: 'electron-strip-crossorigin',
+      transformIndexHtml(html) {
+        return html.replace(/\s+crossorigin/g, '')
+      },
+    },
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
