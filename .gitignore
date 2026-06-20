@@ -7,3 +7,6 @@ release/
 
 # Local Netlify folder
 .netlify
+
+# Env (contains anon key — public, but kept out of git by convention)
+.env

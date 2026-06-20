@@ -15,24 +15,29 @@ import Calendar from './pages/Calendar'
 import Parts from './pages/Parts'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
-import Activate from './pages/Activate'
+import Auth from './pages/Auth'
 import UpdateBanner from './components/UpdateBanner'
+import DemoBanner from './components/DemoBanner'
+import { supabase } from './lib/supabase'
 
-type LicenceStatus = 'checking' | 'active' | 'none'
+type Status = 'checking' | 'unauthed' | 'authed'
 
 export default function App() {
-  const [licenceStatus, setLicenceStatus] = useState<LicenceStatus>('checking')
+  const [status, setStatus] = useState<Status>('checking')
 
   useEffect(() => {
-    // Ask main process for the current licence state
-    window.api.getLicence().then((licence) => {
-      setLicenceStatus(licence ? 'active' : 'none')
-    }).catch(() => {
-      setLicenceStatus('none')
+    supabase.auth.getSession().then(({ data }) => {
+      setStatus(data.session ? 'authed' : 'unauthed')
     })
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setStatus(session ? 'authed' : 'unauthed')
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
-  if (licenceStatus === 'checking') {
+  if (status === 'checking') {
     return (
       <div className="min-h-screen bg-[#16181D] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -43,13 +48,14 @@ export default function App() {
     )
   }
 
-  if (licenceStatus === 'none') {
-    return <Activate onActivated={() => setLicenceStatus('active')} />
+  if (status === 'unauthed') {
+    return <Auth />
   }
 
   return (
     <>
       <Layout>
+        <DemoBanner />
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />

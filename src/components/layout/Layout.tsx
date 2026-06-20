@@ -3,9 +3,10 @@ import { useLocation, Link } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Car, Wrench, FileText, FileCheck,
   Calendar, Package, BarChart3, Settings, ChevronLeft, ChevronRight,
-  Quote
+  Quote, LogOut
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { signOut } from '@/lib/auth'
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -81,8 +82,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        {/* Collapse toggle */}
-        <div className="px-2 pb-3">
+        {/* Sign out + collapse toggle */}
+        <div className="px-2 pb-3 space-y-0.5">
+          <button
+            onClick={() => signOut()}
+            title={collapsed ? 'Sign out' : undefined}
+            className={cn(
+              'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors text-sm',
+              collapsed ? 'justify-center' : ''
+            )}
+          >
+            <LogOut className="w-4 h-4" />
+            {!collapsed && <span>Sign out</span>}
+          </button>
           <button
             onClick={() => setCollapsed(c => !c)}
             className={cn(
