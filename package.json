@@ -73,6 +73,7 @@
     },
     "win": {
       "icon": "build/icon.ico",
+      "artifactName": "GarageLY-Setup.${ext}",
       "target": [
         {
           "target": "nsis",
@@ -90,7 +91,8 @@
       "provider": "github",
       "owner": "aireadyukhub-hue",
       "repo": "garagely-releases",
-      "private": false
+      "private": false,
+      "releaseType": "release"
     }
   },
   "allowScripts": {

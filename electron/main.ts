@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, dialog, Menu } from 'electron'
+import type { MenuItemConstructorOptions } from 'electron'
 import path from 'path'
 import { autoUpdater } from 'electron-updater'
 import { initDatabase } from './database'
@@ -68,6 +69,23 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: 'deny' }
+  })
+
+  // Right-click context menu with Cut/Copy/Paste/Select All. Electron has no
+  // native edit menu by default, so right-click → Paste didn't work (only Ctrl/Cmd+V).
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    const { isEditable, editFlags, selectionText } = params
+    if (!isEditable && !selectionText) return
+    const template: MenuItemConstructorOptions[] = isEditable
+      ? [
+          { role: 'cut', enabled: editFlags.canCut },
+          { role: 'copy', enabled: editFlags.canCopy },
+          { role: 'paste', enabled: editFlags.canPaste },
+          { type: 'separator' },
+          { role: 'selectAll' },
+        ]
+      : [{ role: 'copy' }]
+    Menu.buildFromTemplate(template).popup({ window: mainWindow! })
   })
 }
 

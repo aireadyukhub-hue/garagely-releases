@@ -144,7 +144,7 @@
   <div class="card">
     <div class="tick">✓</div>
     <h1>You're all set!</h1>
-    <p class="sub">Your 14-day free trial has started. Download the app below, install it, and enter your licence key when prompted.</p>
+    <p class="sub">Your 14-day free trial has started. <strong style="color:var(--text)">Save your licence key below</strong> — you'll need it to activate the app and to sign in on any other device.</p>
 
     <div class="key-box">
       <div class="key-label">Your Licence Key</div>
@@ -152,6 +152,7 @@
         <span class="loading">Fetching your key…</span>
       </div>
       <button class="copy-btn" id="copy-btn" onclick="copyKey()" style="display:none">Copy key</button>
+      <p id="save-note" style="display:none; margin-top:1rem; font-size:0.9rem; color:var(--orange); font-weight:600; line-height:1.5;">⚠️ Save this key now — take a screenshot or write it down. You'll need it to activate the app and to log in on any other device.</p>
     </div>
     <div id="key-error" class="error-note" style="display:none"></div>
 
@@ -180,12 +181,12 @@
     const BACKEND = 'https://garagely-backend.netlify.app'
     let licenceKey = null
 
-    async function fetchKey() {
+    async function fetchKey(attempt = 0) {
       const params = new URLSearchParams(window.location.search)
       const sessionId = params.get('session_id')
 
       if (!sessionId) {
-        showKeyError('No session found. Please check your email for your licence key.')
+        showKeyError('No session found. Please contact support@garagely.co.uk with your order email.')
         return
       }
 
@@ -196,11 +197,18 @@
           licenceKey = data.key
           document.getElementById('key-display').textContent = data.key
           document.getElementById('copy-btn').style.display = 'inline-block'
-        } else {
-          showKeyError('Key not ready yet — please wait a moment and refresh the page, or contact support@garagely.co.uk')
+          document.getElementById('save-note').style.display = 'block'
+          return
         }
-      } catch {
-        showKeyError('Could not load your key — please contact support@garagely.co.uk with your order email.')
+      } catch { /* fall through to retry */ }
+
+      // The webhook can take a few seconds to create the key — retry quietly.
+      if (attempt < 10) {
+        document.getElementById('key-display').innerHTML =
+          '<span class="loading">Generating your key…</span>'
+        setTimeout(() => fetchKey(attempt + 1), 2500)
+      } else {
+        showKeyError('Key is taking longer than usual. Please refresh this page in a minute, or email support@garagely.co.uk and we\'ll send it over.')
       }
     }
 

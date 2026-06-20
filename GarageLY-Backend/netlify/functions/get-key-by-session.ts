@@ -40,10 +40,12 @@ export const handler: Handler = async (event) => {
     return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Invalid session' }) }
   }
 
-  // Look up the licence in Supabase by email
+  // Look up the licence in Supabase by email.
+  // NOTE: the column is `key`, not `licence_key` (this mismatch was the bug
+  // that left the success page stuck on "Key not ready yet").
   const { data, error } = await supabase
     .from('licences')
-    .select('licence_key, email, status, trial_ends_at')
+    .select('key, email, status, trial_ends_at')
     .eq('email', email.toLowerCase())
     .order('created_at', { ascending: false })
     .limit(1)
@@ -61,6 +63,6 @@ export const handler: Handler = async (event) => {
   return {
     statusCode: 200,
     headers: CORS,
-    body: JSON.stringify({ key: data.licence_key, email: data.email, status: data.status }),
+    body: JSON.stringify({ key: data.key, email: data.email, status: data.status }),
   }
 }
