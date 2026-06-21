@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLocation, Link } from 'react-router-dom'
+import api from '@/lib/api'
 import {
   LayoutDashboard, Users, Car, Wrench, FileText, FileCheck,
   Calendar, Package, BarChart3, Settings, ChevronLeft, ChevronRight,
-  Quote, LogOut
+  Quote, LogOut, Truck, LifeBuoy
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/lib/auth'
@@ -12,18 +13,33 @@ const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/customers', label: 'Customers', icon: Users },
   { path: '/vehicles', label: 'Vehicles', icon: Car },
-  { path: '/jobs', label: 'Jobs', icon: Wrench },
-  { path: '/invoices', label: 'Invoices', icon: FileText },
+  // Workflow order: quote → job sheet → invoice
   { path: '/quotes', label: 'Quotes', icon: Quote },
+  { path: '/jobs', label: 'Job Sheets', icon: Wrench },
+  { path: '/invoices', label: 'Invoices', icon: FileText },
   { path: '/calendar', label: 'Calendar', icon: Calendar },
   { path: '/parts', label: 'Parts', icon: Package },
+  { path: '/suppliers', label: 'Suppliers', icon: Truck },
   { path: '/reports', label: 'Reports', icon: BarChart3 },
   { path: '/settings', label: 'Settings', icon: Settings },
+  { path: '/help', label: 'Help & Feedback', icon: LifeBuoy },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false)
+  const [logo, setLogo] = useState<string | null>(null)
   const location = useLocation()
+
+  // Customer's custom logo for the top-centre header (refreshes when saved).
+  useEffect(() => {
+    const loadLogo = () =>
+      api.getSettings()
+        .then((s) => setLogo((s as { logo_data?: string | null })?.logo_data ?? null))
+        .catch(() => {})
+    loadLogo()
+    window.addEventListener('settings-updated', loadLogo)
+    return () => window.removeEventListener('settings-updated', loadLogo)
+  }, [])
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/')
 
@@ -36,30 +52,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           collapsed ? 'w-[60px]' : 'w-[220px]'
         )}
       >
-        {/* Logo area - titlebar drag region */}
+        {/* Logo area - titlebar drag region. GarageLY branding kept here in the
+            corner; the customer's own logo (if set) shows top-centre via Layout.
+            pt-5 pushes the logo below the macOS traffic-light buttons. */}
         <div className={cn(
-          'titlebar-drag flex items-center h-14 px-3 border-b border-zinc-800/60 shrink-0',
-          collapsed ? 'justify-center' : 'gap-3'
+          'titlebar-drag flex items-center h-[84px] pt-5 border-b border-zinc-800/60 shrink-0',
+          collapsed ? 'justify-center px-2' : 'px-4'
         )}>
-          <div className="titlebar-no-drag shrink-0">
+          {collapsed ? (
             <img
               src="./assets/garagely-mark.svg"
-              alt="Garagely"
-              className="w-7 h-7"
-              onError={(e) => {
-                // Fallback for dev mode
-                (e.target as HTMLImageElement).src = '/assets/garagely-mark.svg'
-              }}
+              alt="GarageLY"
+              className="w-11 h-11 titlebar-no-drag"
+              onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagely-mark.svg' }}
             />
-          </div>
-          {!collapsed && (
+          ) : (
             <img
               src="./assets/garagely-logo-dark.svg"
-              alt="Garagely"
-              className="h-5 titlebar-no-drag"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/assets/garagely-logo-dark.svg'
-              }}
+              alt="GarageLY"
+              className="h-11 titlebar-no-drag"
+              onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagely-logo-dark.svg' }}
             />
           )}
         </div>
@@ -114,8 +126,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Titlebar spacer for macOS traffic lights */}
-        <div className="titlebar-drag h-8 bg-[#16181D] shrink-0" />
+        {/* Top bar — customer's logo centred (GarageLY branding stays in the sidebar) */}
+        <div className="titlebar-drag h-[84px] pt-5 bg-[#0f1117] border-b border-zinc-800/60 shrink-0 flex items-center justify-center px-6">
+          {logo && <img src={logo} alt="Business logo" className="max-h-14 max-w-[300px] object-contain" />}
+        </div>
 
         {/* Page content */}
         <div className="flex-1 overflow-y-auto">

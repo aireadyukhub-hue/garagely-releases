@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Search, Users, Phone, Mail } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import CallButton from '@/components/CallButton'
 import api from '@/lib/api'
 import { Customer } from '@/types'
 import { formatDate } from '@/lib/utils'
@@ -83,7 +84,7 @@ export default function Customers() {
                 <td className="px-5 py-3.5">
                   <div className="space-y-0.5">
                     {c.email && <div className="flex items-center gap-1.5 text-zinc-400 text-xs"><Mail className="w-3 h-3" />{c.email}</div>}
-                    {(c.phone || c.mobile) && <div className="flex items-center gap-1.5 text-zinc-400 text-xs"><Phone className="w-3 h-3" />{c.phone || c.mobile}</div>}
+                    {(c.phone || c.mobile) && <div className="flex items-center gap-1.5 text-zinc-400 text-xs"><Phone className="w-3 h-3" />{c.phone || c.mobile}<CallButton number={c.phone || c.mobile} /></div>}
                   </div>
                 </td>
                 <td className="px-5 py-3.5 text-zinc-400">{[c.city, c.postcode].filter(Boolean).join(', ') || '—'}</td>

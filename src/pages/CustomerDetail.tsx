@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, Edit2, Trash2, Plus, Phone, Mail, MapPin, Car, Wrench } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import CallButton from '@/components/CallButton'
 import api from '@/lib/api'
 import { Customer, Vehicle, Job } from '@/types'
 import { formatDate, JOB_STATUS_COLORS, JOB_STATUS_LABELS } from '@/lib/utils'
@@ -83,12 +84,14 @@ export default function CustomerDetail() {
               <div className="flex items-center gap-2.5 text-sm">
                 <Phone className="w-4 h-4 text-zinc-500 shrink-0" />
                 <span className="text-zinc-300">{customer.phone}</span>
+                <CallButton number={customer.phone} className="ml-auto" />
               </div>
             )}
             {customer.mobile && (
               <div className="flex items-center gap-2.5 text-sm">
                 <Phone className="w-4 h-4 text-zinc-500 shrink-0" />
                 <span className="text-zinc-300">{customer.mobile} (mobile)</span>
+                <CallButton number={customer.mobile} className="ml-auto" />
               </div>
             )}
             {(customer.address || customer.city) && (

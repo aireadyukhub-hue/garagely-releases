@@ -94,3 +94,27 @@ export function calcTotals(subtotal: number, vatRate: number) {
   const total = Math.round((subtotal + vat_amount) * 100) / 100
   return { vat_amount, total }
 }
+
+/** Escape a string for safe insertion into printable HTML. */
+export function esc(s: unknown): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+/** Print arbitrary HTML via a hidden iframe (works in Electron + the browser). */
+export function printHtml(html: string): void {
+  const iframe = document.createElement('iframe')
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'
+  document.body.appendChild(iframe)
+  const doc = iframe.contentWindow?.document
+  if (!doc) return
+  doc.open()
+  doc.write(html)
+  doc.close()
+  iframe.contentWindow?.focus()
+  setTimeout(() => {
+    iframe.contentWindow?.print()
+    setTimeout(() => document.body.removeChild(iframe), 1500)
+  }, 300)
+}

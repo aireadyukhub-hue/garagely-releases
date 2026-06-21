@@ -1,7 +1,7 @@
 // All calls go through the GarageLY-Backend admin-api Netlify function.
 // The admin secret is stored in localStorage (set on login).
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://garagely-backend.netlify.app'
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://garagely-backend.garagely.workers.dev'
 
 function getSecret(): string {
   return localStorage.getItem('admin_secret') || ''
@@ -43,4 +43,11 @@ export const api = {
     request('POST', 'update-licence', { key, ...updates }),
   revokeLicence: (key: string) =>
     request('POST', 'revoke-licence', { key }),
+  listSubmissions: (filters?: { type?: string; status?: string }) =>
+    request('GET', 'list-submissions', undefined, {
+      ...(filters?.type ? { type: filters.type } : {}),
+      ...(filters?.status ? { status: filters.status } : {}),
+    }),
+  updateSubmission: (id: number, status: string) =>
+    request('POST', 'update-submission', { id, status }),
 }

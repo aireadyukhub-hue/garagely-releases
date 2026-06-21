@@ -9,6 +9,8 @@
  *   POST ?action=update-licence         — update status / garageName
  *   POST ?action=revoke-licence         — set status=cancelled
  *   GET  ?action=stats                  — dashboard stats
+ *   GET  ?action=list-submissions       — list feedback / support submissions (optional ?type= / ?status=)
+ *   POST ?action=update-submission      — update a submission's status
  */
 
 import { Handler } from '@netlify/functions'
@@ -79,6 +81,26 @@ export const handler: Handler = async (event) => {
     return { statusCode: 200, headers: CORS, body: JSON.stringify({ stats: counts }) }
   }
 
+  // ── GET: list-submissions ─────────────────────────────────────────────────
+  if (event.httpMethod === 'GET' && action === 'list-submissions') {
+    const type = event.queryStringParameters?.type
+    const status = event.queryStringParameters?.status
+    let query = supabase
+      .from('submissions')
+      .select('*, garages(name)')
+      .order('created_at', { ascending: false })
+    if (type) query = query.eq('type', type)
+    if (status) query = query.eq('status', status)
+    const { data, error } = await query
+    if (error) return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: error.message }) }
+    const submissions = (data || []).map((s: any) => ({
+      ...s,
+      garage_name: s.garages?.name || null,
+      garages: undefined,
+    }))
+    return { statusCode: 200, headers: CORS, body: JSON.stringify({ submissions }) }
+  }
+
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) }
   }
@@ -143,6 +165,23 @@ export const handler: Handler = async (event) => {
     const { error } = await supabase.from('licences').update({ status: 'cancelled' }).eq('key', key)
     if (error) return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: error.message }) }
     return { statusCode: 200, headers: CORS, body: JSON.stringify({ success: true }) }
+  }
+
+  // ── POST: update-submission ───────────────────────────────────────────────
+  if (action === 'update-submission') {
+    const { id, status } = body
+    if (!id) return badRequest('id required')
+    if (!status) return badRequest('status required')
+
+    const { data, error } = await supabase
+      .from('submissions')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: error.message }) }
+    return { statusCode: 200, headers: CORS, body: JSON.stringify({ submission: data }) }
   }
 
   return badRequest(`Unknown action: ${action}`)

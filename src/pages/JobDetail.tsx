@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Edit2, Trash2, Plus, Minus, FileText } from 'lucide-react'
+import { ArrowLeft, Edit2, Trash2, Minus, FileText, Printer } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import api from '@/lib/api'
 import { Job, LineItem } from '@/types'
-import { formatDate, formatCurrency, JOB_STATUS_COLORS, JOB_STATUS_LABELS, cn } from '@/lib/utils'
+import { formatDate, formatCurrency, printHtml, esc, JOB_STATUS_COLORS, JOB_STATUS_LABELS, cn } from '@/lib/utils'
 
 const STATUSES = ['booked', 'in_progress', 'awaiting_parts', 'complete', 'invoiced'] as const
 
@@ -19,6 +19,7 @@ export default function JobDetail() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [editingLines, setEditingLines] = useState(false)
   const [draftLines, setDraftLines] = useState<LineItem[]>([])
+  const [biz, setBiz] = useState<Record<string, string>>({})
 
   const load = () => api.getJob(Number(id)).then((d: unknown) => {
     const data = d as { job: Job; lineItems: LineItem[] }
@@ -29,6 +30,7 @@ export default function JobDetail() {
   })
 
   useEffect(() => { load() }, [id])
+  useEffect(() => { api.getSettings().then(s => setBiz((s as Record<string, string>) || {})).catch(() => {}) }, [])
 
   const handleStatusChange = async (status: string) => {
     await api.updateJob(Number(id), { status })
@@ -54,6 +56,54 @@ export default function JobDetail() {
   const handleDelete = async () => {
     await api.deleteJob(Number(id))
     navigate('/jobs')
+  }
+
+  const handleConvertInvoice = async () => {
+    setSaving(true)
+    const inv = (await api.convertJobToInvoice(Number(id))) as { id?: number } | undefined
+    setSaving(false)
+    if (inv?.id) navigate(`/invoices/${inv.id}`)
+    else await load()
+  }
+
+  const handlePrint = () => {
+    if (!job) return
+    const rows = lineItems.map(li =>
+      `<tr><td>${esc(li.description)}</td><td style="text-align:center">${li.quantity}</td><td class="r">${formatCurrency(li.unit_price)}</td><td class="r">${formatCurrency(li.total)}</td></tr>`).join('')
+    const veh = [job.registration, job.make, job.model].filter(Boolean).join(' ')
+    printHtml(`<!doctype html><html><head><meta charset="utf-8"><title>Job Sheet ${esc(job.job_number)}</title>
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:34px;font-size:13px}
+        h1{font-size:20px;margin:0}.r{text-align:right}.muted{color:#666;font-size:12px}
+        table{width:100%;border-collapse:collapse;margin-top:14px}
+        th,td{padding:7px 8px;border-bottom:1px solid #ddd;text-align:left}
+        th{font-size:11px;text-transform:uppercase;color:#666;border-bottom:2px solid #333}
+        tfoot td{border-bottom:none}
+        .box{border:1px solid #ddd;border-radius:6px;padding:11px;margin-top:12px}
+        .head{display:flex;justify-content:space-between;align-items:flex-start}
+      </style></head><body>
+      <div class="head">
+        <div><h1>${esc(biz.business_name || 'Job Sheet')}</h1>
+          <div class="muted">${esc(biz.address || '')}<br>${esc(biz.phone || '')} ${biz.email ? '· ' + esc(biz.email) : ''}</div></div>
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:bold">JOB SHEET</div>
+          <div class="muted">${esc(job.job_number)}</div>
+          <div class="muted">${formatDate(job.booked_date)}</div></div>
+      </div>
+      <div class="box"><strong>${esc(job.title)}</strong><br>
+        <span class="muted">${esc(job.first_name || '')} ${esc(job.last_name || '')}${veh ? ' · ' + esc(veh) : ''}</span></div>
+      <table>
+        <thead><tr><th>Description</th><th style="text-align:center">Qty</th><th class="r">Unit</th><th class="r">Total</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4" class="muted">No line items</td></tr>'}</tbody>
+        <tfoot>
+          <tr><td colspan="3" class="r muted">Subtotal</td><td class="r">${formatCurrency(subtotal)}</td></tr>
+          <tr><td colspan="3" class="r muted">VAT (20%)</td><td class="r">${formatCurrency(vat)}</td></tr>
+          <tr><td colspan="3" class="r"><strong>Total</strong></td><td class="r"><strong>${formatCurrency(subtotal + vat)}</strong></td></tr>
+        </tfoot>
+      </table>
+      ${job.technician_notes ? `<div class="box"><strong>Technician notes</strong><br>${esc(job.technician_notes).replace(/\n/g, '<br>')}</div>` : ''}
+      ${job.description ? `<div class="box"><strong>Description</strong><br>${esc(job.description).replace(/\n/g, '<br>')}</div>` : ''}
+      </body></html>`)
   }
 
   const addLine = (type: 'labour' | 'part') => {
@@ -94,6 +144,12 @@ export default function JobDetail() {
           </div>
           <p className="text-sm text-zinc-500 mt-0.5 font-mono">{job.job_number}</p>
         </div>
+        <button onClick={handlePrint} className="btn-secondary"><Printer className="w-4 h-4" /> Print</button>
+        {job.status !== 'invoiced' && (
+          <button onClick={handleConvertInvoice} disabled={saving} className="btn-secondary text-green-400 hover:text-green-300">
+            <FileText className="w-4 h-4" /> {saving ? 'Creating…' : 'Create Invoice'}
+          </button>
+        )}
         <button onClick={() => setEditOpen(true)} className="btn-secondary"><Edit2 className="w-4 h-4" /> Edit</button>
         <button onClick={() => setDeleteOpen(true)} className="btn-danger"><Trash2 className="w-4 h-4" /></button>
       </div>

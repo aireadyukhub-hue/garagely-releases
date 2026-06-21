@@ -179,4 +179,5 @@ export interface Settings {
   quote_prefix: string
   quote_next: number
   currency: string
+  logo_data?: string | null
 }

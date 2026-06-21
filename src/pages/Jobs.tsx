@@ -63,7 +63,7 @@ export default function Jobs() {
   return (
     <div className="pt-2">
       <div className="page-header">
-        <h1 className="page-title">Jobs</h1>
+        <h1 className="page-title">Job Sheets</h1>
         <button onClick={() => { setForm(EMPTY_J); setModalOpen(true) }} className="btn-primary">
           <Plus className="w-4 h-4" /> New Job
         </button>

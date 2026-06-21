@@ -328,6 +328,16 @@ const api = {
     return rows?.[0]
   },
 
+  convertQuoteToInvoice: async (id: number) => {
+    const rows = unwrap(await supabase.rpc('convert_quote_to_invoice', { p_quote_id: id })) as Row[]
+    return rows?.[0]
+  },
+
+  convertJobToInvoice: async (id: number) => {
+    const rows = unwrap(await supabase.rpc('convert_job_to_invoice', { p_job_id: id })) as Row[]
+    return rows?.[0]
+  },
+
   // ─── Bookings ─────────────────────────────────────────────────────────────
   getBookings: (filters?: any) =>
     cached(`bookings:${JSON.stringify(filters ?? {})}`, async () => {
@@ -397,6 +407,38 @@ const api = {
   deletePart: async (id: number) => {
     unwrap(await supabase.from('parts').delete().eq('id', id).select())
     return { success: true }
+  },
+
+  // ─── Suppliers ────────────────────────────────────────────────────────────
+  getSuppliers: () =>
+    cached('suppliers', async () =>
+      unwrap(await supabase.from('suppliers').select('*').order('name')),
+    ),
+
+  createSupplier: async (data: any) => {
+    const garage_id = await getGarageId()
+    return unwrap(await supabase.from('suppliers').insert({ ...data, garage_id }).select().single())
+  },
+
+  updateSupplier: async (id: number, data: any) => {
+    const { id: _omit, ...rest } = data ?? {}
+    return unwrap(await supabase.from('suppliers').update(rest).eq('id', id).select().single())
+  },
+
+  deleteSupplier: async (id: number) => {
+    unwrap(await supabase.from('suppliers').delete().eq('id', id).select())
+    return { success: true }
+  },
+
+  // ─── Feedback / support submissions ───────────────────────────────────────
+  getSubmissions: () =>
+    cached('submissions', async () =>
+      unwrap(await supabase.from('submissions').select('*').order('created_at', { ascending: false })),
+    ),
+
+  createSubmission: async (data: any) => {
+    const garage_id = await getGarageId()
+    return unwrap(await supabase.from('submissions').insert({ ...data, garage_id }).select().single())
   },
 
   // ─── Dashboard & reports ──────────────────────────────────────────────────

@@ -17,7 +17,7 @@ export default function Login({ onLogin }: Props) {
 
     try {
       // Try a real API call to verify the password
-      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://garagely-backend.netlify.app'
+      const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://garagely-backend.garagely.workers.dev'
       const res = await fetch(`${BACKEND}/.netlify/functions/admin-api?action=stats`, {
         headers: { 'X-Admin-Secret': password },
       })

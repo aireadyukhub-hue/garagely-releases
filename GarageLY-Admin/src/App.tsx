@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Licences from './pages/Licences'
 import CreateTrial from './pages/CreateTrial'
+import Submissions from './pages/Submissions'
 import Sidebar from './components/Sidebar'
 
 function isLoggedIn(): boolean {
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/licences" element={<Licences />} />
+          <Route path="/submissions" element={<Submissions />} />
           <Route path="/create-trial" element={<CreateTrial />} />
         </Routes>
       </main>

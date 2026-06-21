@@ -5,7 +5,7 @@ import { supabase, clearGarageId } from './supabase'
 import { clearCache } from './cache'
 
 const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || 'https://garagely-backend.netlify.app'
+  import.meta.env.VITE_BACKEND_URL || 'https://garagely-backend.garagely.workers.dev'
 
 export async function signIn(email: string, password: string): Promise<void> {
   const { error } = await supabase.auth.signInWithPassword({

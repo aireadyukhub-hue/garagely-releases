@@ -3,7 +3,7 @@ import fs from 'fs'
 import https from 'https'
 
 // Backend URL — swap to production URL when live
-export const BACKEND_URL = process.env.GARAGELY_BACKEND_URL || 'https://garagely-backend.netlify.app'
+export const BACKEND_URL = process.env.GARAGELY_BACKEND_URL || 'https://garagely-backend.garagely.workers.dev'
 
 export interface LicenceInfo {
   key: string

@@ -196,7 +196,7 @@ export default function Auth() {
             className="text-[#9CA3AF] cursor-pointer hover:text-[#F4A523]"
             onClick={() =>
               window.open(
-                mode === 'signin' ? 'https://garagely.netlify.app' : 'mailto:support@garagely.co.uk',
+                mode === 'signin' ? 'https://garagely.pages.dev' : 'mailto:support@garagely.co.uk',
                 '_blank',
               )
             }

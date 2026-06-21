@@ -13,8 +13,10 @@ import InvoiceDetail from './pages/InvoiceDetail'
 import Quotes from './pages/Quotes'
 import Calendar from './pages/Calendar'
 import Parts from './pages/Parts'
+import Suppliers from './pages/Suppliers'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
+import Help from './pages/Help'
 import Auth from './pages/Auth'
 import UpdateBanner from './components/UpdateBanner'
 import DemoBanner from './components/DemoBanner'
@@ -70,8 +72,10 @@ export default function App() {
           <Route path="/quotes" element={<Quotes />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/parts" element={<Parts />} />
+          <Route path="/suppliers" element={<Suppliers />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/help" element={<Help />} />
         </Routes>
       </Layout>
       <UpdateBanner />

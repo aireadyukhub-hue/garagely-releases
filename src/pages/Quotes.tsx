@@ -18,12 +18,14 @@ export default function Quotes() {
   const [form, setForm] = useState<Partial<typeof EMPTY_Q>>(EMPTY_Q)
   const [saving, setSaving] = useState(false)
   const [converting, setConverting] = useState<number | null>(null)
+  const [labourRate, setLabourRate] = useState(65)
 
   const load = () => api.getQuotes().then(d => setQuotes(d as Quote[]))
   useEffect(() => {
     load()
     api.getCustomers().then(d => setCustomers(d as Customer[]))
     api.getVehicles().then(d => setVehicles(d as Vehicle[]))
+    api.getSettings().then(s => { const r = (s as { labour_rate?: number })?.labour_rate; if (r) setLabourRate(r) }).catch(() => {})
   }, [])
 
   const filtered = quotes.filter(q =>
@@ -43,9 +45,10 @@ export default function Quotes() {
     setSaving(false)
   }
 
-  const handleConvert = async (id: number) => {
+  const handleConvert = async (id: number, target: 'job' | 'invoice') => {
     setConverting(id)
-    await api.convertQuoteToJob(id)
+    if (target === 'job') await api.convertQuoteToJob(id)
+    else await api.convertQuoteToInvoice(id)
     await load()
     setConverting(null)
   }
@@ -90,15 +93,27 @@ export default function Quotes() {
                 <td className="px-5 py-3.5 font-medium text-zinc-200">{formatCurrency(q.total)}</td>
                 <td className="px-5 py-3.5 text-zinc-500 text-xs">{formatDate(q.valid_until)}</td>
                 <td className="px-5 py-3.5">
-                  {q.status !== 'converted' && (
-                    <button onClick={() => handleConvert(q.id)} disabled={converting === q.id}
-                      className="btn-ghost text-xs py-1 px-2 text-blue-400 hover:text-blue-300">
-                      <ArrowRight className="w-3.5 h-3.5" />
-                      {converting === q.id ? 'Converting…' : 'Convert to Job'}
-                    </button>
-                  )}
-                  {q.converted_job_id && (
-                    <Link to={`/jobs/${q.converted_job_id}`} className="text-xs text-zinc-500 hover:text-zinc-300">View Job →</Link>
+                  {q.status !== 'converted' ? (
+                    converting === q.id ? (
+                      <span className="text-xs text-zinc-500">Converting…</span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => handleConvert(q.id, 'job')}
+                          className="btn-ghost text-xs py-1 px-2 text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">
+                          <ArrowRight className="w-3.5 h-3.5" /> Job sheet
+                        </button>
+                        <button onClick={() => handleConvert(q.id, 'invoice')}
+                          className="btn-ghost text-xs py-1 px-2 text-green-400 hover:text-green-300 inline-flex items-center gap-1">
+                          <ArrowRight className="w-3.5 h-3.5" /> Invoice
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <span className="flex items-center gap-2 text-xs">
+                      {q.converted_job_id && (
+                        <Link to={`/jobs/${q.converted_job_id}`} className="text-zinc-400 hover:text-zinc-200">View Job →</Link>
+                      )}
+                    </span>
                   )}
                 </td>
               </tr>
@@ -150,7 +165,10 @@ export default function Quotes() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="label mb-0">Line Items</label>
-              <button onClick={() => setForm(f => ({ ...f, lineItems: [...(f.lineItems || []), { description: '', quantity: 1, unit_price: 0, total: 0 }] }))} className="btn-ghost text-xs py-1 px-2">+ Add line</button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setForm(f => ({ ...f, lineItems: [...(f.lineItems || []), { description: 'Labour', quantity: 1, unit_price: labourRate, total: labourRate }] }))} className="btn-ghost text-xs py-1 px-2 text-blue-400">+ Labour</button>
+                <button onClick={() => setForm(f => ({ ...f, lineItems: [...(f.lineItems || []), { description: '', quantity: 1, unit_price: 0, total: 0 }] }))} className="btn-ghost text-xs py-1 px-2">+ Part / line</button>
+              </div>
             </div>
             <div className="space-y-2">
               {(form.lineItems || []).map((item, idx) => (
