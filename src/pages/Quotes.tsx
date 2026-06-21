@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Search, ArrowRight } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import NumberField from '@/components/ui/NumberField'
 import api from '@/lib/api'
 import { Quote, Customer, Vehicle } from '@/types'
 import { formatDate, formatCurrency, QUOTE_STATUS_COLORS, cn, calcTotals } from '@/lib/utils'
@@ -19,12 +20,16 @@ export default function Quotes() {
   const [saving, setSaving] = useState(false)
   const [converting, setConverting] = useState<number | null>(null)
   const [labourRate, setLabourRate] = useState(65)
+  const [technicians, setTechnicians] = useState<{ id: number; name: string; colour: string }[]>([])
+  const [slotJob, setSlotJob] = useState<any>(null)
+  const [slot, setSlot] = useState({ day: '', time: '09:00', technician_id: null as number | null })
 
   const load = () => api.getQuotes().then(d => setQuotes(d as Quote[]))
   useEffect(() => {
     load()
     api.getCustomers().then(d => setCustomers(d as Customer[]))
     api.getVehicles().then(d => setVehicles(d as Vehicle[]))
+    api.getTechnicians().then(d => setTechnicians(d as { id: number; name: string; colour: string }[])).catch(() => {})
     api.getSettings().then(s => { const r = (s as { labour_rate?: number })?.labour_rate; if (r) setLabourRate(r) }).catch(() => {})
   }, [])
 
@@ -47,10 +52,33 @@ export default function Quotes() {
 
   const handleConvert = async (id: number, target: 'job' | 'invoice') => {
     setConverting(id)
-    if (target === 'job') await api.convertQuoteToJob(id)
-    else await api.convertQuoteToInvoice(id)
-    await load()
-    setConverting(null)
+    if (target === 'job') {
+      const job = await api.convertQuoteToJob(id)
+      await load()
+      setConverting(null)
+      // Offer to book the new job sheet straight into the calendar.
+      setSlot({ day: new Date().toISOString().slice(0, 10), time: '09:00', technician_id: null })
+      setSlotJob(job)
+    } else {
+      await api.convertQuoteToInvoice(id)
+      await load()
+      setConverting(null)
+    }
+  }
+
+  const bookSlot = async () => {
+    if (!slotJob || !slot.day) { setSlotJob(null); return }
+    const h = Number(slot.time.slice(0, 2))
+    const start = `${slot.day}T${slot.time}:00`
+    const end = `${slot.day}T${String(Math.min(h + 1, 23)).padStart(2, '0')}:${slot.time.slice(3, 5)}:00`
+    await api.createBooking({
+      title: slotJob.title || `Job ${slotJob.job_number || ''}`.trim(),
+      start_time: start, end_time: end,
+      customer_id: slotJob.customer_id, vehicle_id: slotJob.vehicle_id || null,
+      job_id: slotJob.id, technician_id: slot.technician_id, status: 'confirmed',
+    })
+    if (slot.technician_id) await api.updateJob(slotJob.id, { technician_id: slot.technician_id })
+    setSlotJob(null)
   }
 
   const customerVehicles = vehicles.filter(v => v.customer_id === form.customer_id)
@@ -159,7 +187,7 @@ export default function Quotes() {
               </select>
             </div>
             <div><label className="label">Valid Until</label><input type="date" className="input" value={form.valid_until} onChange={e => setForm(f => ({ ...f, valid_until: e.target.value }))} /></div>
-            <div><label className="label">VAT Rate (%)</label><input type="number" className="input" value={form.vat_rate} onChange={e => setForm(f => ({ ...f, vat_rate: Number(e.target.value) }))} /></div>
+            <div><label className="label">VAT Rate (%)</label><NumberField className="input" value={form.vat_rate} onChange={n => setForm(f => ({ ...f, vat_rate: n }))} /></div>
           </div>
 
           <div>
@@ -175,10 +203,10 @@ export default function Quotes() {
                 <div key={idx} className="grid grid-cols-[1fr_80px_100px_36px] gap-2">
                   <input className="input text-xs py-1.5" value={item.description} placeholder="Description"
                     onChange={e => setForm(f => ({ ...f, lineItems: f.lineItems!.map((l, i) => i === idx ? { ...l, description: e.target.value } : l) }))} />
-                  <input type="number" className="input text-xs py-1.5" value={item.quantity} placeholder="Qty"
-                    onChange={e => setForm(f => ({ ...f, lineItems: f.lineItems!.map((l, i) => i === idx ? { ...l, quantity: Number(e.target.value) } : l) }))} />
-                  <input type="number" className="input text-xs py-1.5" value={item.unit_price} placeholder="Price"
-                    onChange={e => setForm(f => ({ ...f, lineItems: f.lineItems!.map((l, i) => i === idx ? { ...l, unit_price: Number(e.target.value) } : l) }))} />
+                  <NumberField className="input text-xs py-1.5" value={item.quantity} decimal={false} placeholder="Qty"
+                    onChange={n => setForm(f => ({ ...f, lineItems: f.lineItems!.map((l, i) => i === idx ? { ...l, quantity: n } : l) }))} />
+                  <NumberField className="input text-xs py-1.5" value={item.unit_price} placeholder="Price"
+                    onChange={n => setForm(f => ({ ...f, lineItems: f.lineItems!.map((l, i) => i === idx ? { ...l, unit_price: n } : l) }))} />
                   <button onClick={() => setForm(f => ({ ...f, lineItems: f.lineItems!.filter((_, i) => i !== idx) }))} className="btn-ghost p-1 text-red-400">×</button>
                 </div>
               ))}
@@ -192,6 +220,30 @@ export default function Quotes() {
           </div>
 
           <div><label className="label">Notes</label><textarea className="textarea" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
+        </div>
+      </Modal>
+
+      {/* Slot picker after quote → job conversion */}
+      <Modal open={!!slotJob} onClose={() => setSlotJob(null)} title="Book this job in?"
+        footer={<>
+          <button onClick={() => setSlotJob(null)} className="btn-secondary">Skip</button>
+          <button onClick={bookSlot} disabled={!slot.day} className="btn-primary">Add to calendar</button>
+        </>}>
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-400">
+            Job sheet <span className="font-mono text-blue-400">{slotJob?.job_number}</span> created. Want to book it into the calendar now? (You can skip and do it later.)
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="label">Date</label><input type="date" className="input" value={slot.day} onChange={e => setSlot(s => ({ ...s, day: e.target.value }))} /></div>
+            <div><label className="label">Start time</label><input type="time" className="input" value={slot.time} onChange={e => setSlot(s => ({ ...s, time: e.target.value }))} /></div>
+          </div>
+          <div>
+            <label className="label">Technician</label>
+            <select className="select" value={slot.technician_id || ''} onChange={e => setSlot(s => ({ ...s, technician_id: e.target.value ? Number(e.target.value) : null }))}>
+              <option value="">Unassigned</option>
+              {technicians.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
         </div>
       </Modal>
     </div>

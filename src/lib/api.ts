@@ -455,6 +455,58 @@ const api = {
       unwrap(await supabase.rpc('report_jobs', { p_from: from, p_to: to })),
     ),
 
+  // ─── Technicians ──────────────────────────────────────────────────────────
+  getTechnicians: (includeInactive = false) =>
+    cached(`technicians:${includeInactive}`, async () => {
+      let q = supabase.from('technicians').select('*').order('name')
+      if (!includeInactive) q = q.eq('active', true)
+      return unwrap(await q)
+    }),
+
+  createTechnician: async (data: any) => {
+    const garage_id = await getGarageId()
+    return unwrap(await supabase.from('technicians').insert({ ...data, garage_id }).select().single())
+  },
+
+  updateTechnician: async (id: number, data: any) => {
+    const { id: _omit, ...rest } = data ?? {}
+    return unwrap(await supabase.from('technicians').update(rest).eq('id', id).select().single())
+  },
+
+  deleteTechnician: async (id: number) => {
+    unwrap(await supabase.from('technicians').delete().eq('id', id).select())
+    return { success: true }
+  },
+
+  // ─── Technician time-off (rota exceptions) ────────────────────────────────
+  getTimeOff: (from?: string, to?: string) =>
+    cached(`timeoff:${from ?? ''}:${to ?? ''}`, async () => {
+      let q = supabase.from('technician_time_off').select('*')
+      if (from) q = q.gte('day', from)
+      if (to) q = q.lte('day', to)
+      return unwrap(await q.order('day'))
+    }),
+
+  // Upsert a single day's exception for a technician ('off' | 'half').
+  setTimeOff: async (technician_id: number, day: string, kind: 'off' | 'half', note?: string) => {
+    const garage_id = await getGarageId()
+    return unwrap(
+      await supabase
+        .from('technician_time_off')
+        .upsert({ technician_id, day, kind, note: note ?? null, garage_id }, { onConflict: 'technician_id,day' })
+        .select()
+        .single(),
+    )
+  },
+
+  // Remove an exception (technician is back to working that day).
+  clearTimeOff: async (technician_id: number, day: string) => {
+    unwrap(
+      await supabase.from('technician_time_off').delete().eq('technician_id', technician_id).eq('day', day).select(),
+    )
+    return { success: true }
+  },
+
   // ─── Settings ─────────────────────────────────────────────────────────────
   getSettings: () => cached('settings', async () => settingsRow()),
 

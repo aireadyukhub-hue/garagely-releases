@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Search, Download } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import NumberField from '@/components/ui/NumberField'
 import api from '@/lib/api'
 import { Invoice, Customer, Job } from '@/types'
 import { formatDate, formatCurrency, INVOICE_STATUS_COLORS, INVOICE_STATUS_LABELS, cn, calcTotals } from '@/lib/utils'
@@ -56,7 +57,7 @@ export default function Invoices() {
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         {[
           { label: 'Total Invoiced', value: formatCurrency(invoices.reduce((s, i) => s + i.total, 0)), sub: `${invoices.length} invoices` },
           { label: 'Outstanding', value: formatCurrency(invoices.filter(i => i.status === 'unpaid').reduce((s, i) => s + i.total, 0)), sub: `${invoices.filter(i => i.status === 'unpaid').length} unpaid` },
@@ -158,7 +159,7 @@ export default function Invoices() {
               </select>
             </div>
             <div><label className="label">Due Date</label><input type="date" className="input" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} /></div>
-            <div><label className="label">VAT Rate (%)</label><input type="number" className="input" value={form.vat_rate} onChange={e => setForm(f => ({ ...f, vat_rate: Number(e.target.value) }))} /></div>
+            <div><label className="label">VAT Rate (%)</label><NumberField className="input" value={form.vat_rate} onChange={n => setForm(f => ({ ...f, vat_rate: n }))} /></div>
           </div>
 
           <div>
@@ -170,8 +171,8 @@ export default function Invoices() {
               {(form.lineItems || []).map((item, idx) => (
                 <div key={idx} className="grid grid-cols-[1fr_80px_100px_36px] gap-2">
                   <input className="input text-xs py-1.5" value={item.description} onChange={e => setForm(f => ({ ...f, lineItems: f.lineItems!.map((l, i) => i === idx ? { ...l, description: e.target.value } : l) }))} placeholder="Description" />
-                  <input type="number" className="input text-xs py-1.5" value={item.quantity} onChange={e => setForm(f => ({ ...f, lineItems: f.lineItems!.map((l, i) => i === idx ? { ...l, quantity: Number(e.target.value) } : l) }))} placeholder="Qty" />
-                  <input type="number" className="input text-xs py-1.5" value={item.unit_price} onChange={e => setForm(f => ({ ...f, lineItems: f.lineItems!.map((l, i) => i === idx ? { ...l, unit_price: Number(e.target.value) } : l) }))} placeholder="Price" />
+                  <NumberField className="input text-xs py-1.5" value={item.quantity} decimal={false} onChange={n => setForm(f => ({ ...f, lineItems: f.lineItems!.map((l, i) => i === idx ? { ...l, quantity: n } : l) }))} placeholder="Qty" />
+                  <NumberField className="input text-xs py-1.5" value={item.unit_price} onChange={n => setForm(f => ({ ...f, lineItems: f.lineItems!.map((l, i) => i === idx ? { ...l, unit_price: n } : l) }))} placeholder="Price" />
                   <button onClick={() => setForm(f => ({ ...f, lineItems: f.lineItems!.filter((_, i) => i !== idx) }))} className="btn-ghost p-1 text-red-400">×</button>
                 </div>
               ))}

@@ -22,12 +22,25 @@ const BOOKING_COLORS = [
   'bg-pink-500/20 border-pink-500/40 text-pink-300',
 ]
 
-const EMPTY_B = { customer_id: 0, vehicle_id: 0, job_id: null, title: '', start_time: '', end_time: '', notes: '', status: 'confirmed' }
+const EMPTY_B = { customer_id: 0, vehicle_id: 0, job_id: null as number | null, technician_id: null as number | null, title: '', start_time: '', end_time: '', notes: '', status: 'confirmed' }
 const fmtTime = (s: string) => { try { return parseISO(s).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) } catch { return '' } }
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] // JS getDay() order
+
+interface Technician { id: number; name: string; colour: string; work_days?: string[]; start_time?: string | null; end_time?: string | null }
+interface TimeOff { technician_id: number; day: string; kind: 'off' | 'half' }
+interface DayHours { open: boolean; from: string; to: string }
+
+// A technician's colour dot (full circle = full day, half circle = half day).
+function TechDot({ colour, half, title }: { colour: string; half?: boolean; title?: string }) {
+  return (
+    <span title={title} className="inline-block w-2.5 h-2.5 rounded-full border border-black/20"
+      style={half ? { background: `linear-gradient(90deg, ${colour} 50%, transparent 50%)`, borderColor: colour } : { background: colour }} />
+  )
+}
 
 type View = 'day' | 'week' | 'month'
 // Bookings come back joined with customer/vehicle fields.
-type B = Booking & { first_name?: string; last_name?: string; registration?: string; make?: string; model?: string; job_id?: number | null }
+type B = Booking & { first_name?: string; last_name?: string; registration?: string; make?: string; model?: string; job_id?: number | null; technician_id?: number | null }
 
 export default function Calendar() {
   const [view, setView] = useState<View>('week')
@@ -39,6 +52,9 @@ export default function Calendar() {
   const [form, setForm] = useState<Partial<typeof EMPTY_B>>(EMPTY_B)
   const [saving, setSaving] = useState(false)
   const [detail, setDetail] = useState<B | null>(null)
+  const [technicians, setTechnicians] = useState<Technician[]>([])
+  const [timeOff, setTimeOff] = useState<TimeOff[]>([])
+  const [openingHours, setOpeningHours] = useState<Record<string, DayHours> | null>(null)
 
   // ── Visible range ──────────────────────────────────────────────────────────
   const weekStart = startOfWeek(cursor, { weekStartsOn: 1 })
@@ -53,13 +69,35 @@ export default function Calendar() {
     const from = format(rangeStart, "yyyy-MM-dd'T'00:00:00")
     const to = format(rangeEnd, "yyyy-MM-dd'T'23:59:59")
     api.getBookings({ from, to }).then(d => setBookings(d as B[]))
+    api.getTimeOff(format(rangeStart, 'yyyy-MM-dd'), format(rangeEnd, 'yyyy-MM-dd')).then(d => setTimeOff(d as TimeOff[])).catch(() => {})
   }
 
   useEffect(() => { load() }, [view, cursor]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     api.getCustomers().then(d => setCustomers(d as Customer[]))
     api.getVehicles().then(d => setVehicles(d as Vehicle[]))
+    api.getTechnicians().then(d => setTechnicians(d as Technician[])).catch(() => {})
+    api.getSettings().then(s => setOpeningHours((s as { opening_hours?: Record<string, DayHours> })?.opening_hours || null)).catch(() => {})
   }, [])
+
+  // Which technicians are working a given day (respecting opening hours + time off).
+  const techsForDay = (day: Date): { tech: Technician; half: boolean }[] => {
+    const key = DAY_KEYS[day.getDay()]
+    if (openingHours && openingHours[key] && !openingHours[key].open) return []
+    return technicians.map(t => {
+      // Only on the technician's normal working days.
+      if (t.work_days && t.work_days.length && !t.work_days.includes(key)) return null
+      const off = timeOff.find(o => o.technician_id === t.id && isSameDay(parseISO(o.day + 'T00:00:00'), day))
+      if (off?.kind === 'off') return null
+      return { tech: t, half: off?.kind === 'half' }
+    }).filter(Boolean) as { tech: Technician; half: boolean }[]
+  }
+  const techDotTitle = (t: Technician, half: boolean) => {
+    const hrs = t.start_time && t.end_time ? `${t.start_time}–${t.end_time}` : ''
+    return [t.name, hrs].filter(Boolean).join(' · ') + (half ? ' (half day)' : '')
+  }
+  const techColour = (id?: number | null) => technicians.find(t => t.id === id)?.colour
+  const techName = (id?: number | null) => technicians.find(t => t.id === id)?.name
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   const monthDays = eachDayOfInterval({ start: gridStart, end: gridEnd })
@@ -134,17 +172,30 @@ export default function Calendar() {
                 <div key={i} onClick={() => openNewAt(day, 9)}
                   className={cn('min-h-[104px] border-b border-l border-zinc-800/50 p-1.5 cursor-pointer hover:bg-zinc-800/20 transition-colors',
                     i % 7 === 0 ? 'border-l-0' : '', outside ? 'bg-zinc-900/30' : '')}>
-                  <div className={cn('text-xs font-semibold mb-1 w-6 h-6 flex items-center justify-center rounded-full',
-                    today ? 'bg-[#3B82F6] text-white' : outside ? 'text-zinc-600' : 'text-zinc-300')}>
-                    {format(day, 'd')}
+                  <div className="flex items-start justify-between gap-1">
+                    <div className={cn('text-xs font-semibold mb-1 w-6 h-6 flex items-center justify-center rounded-full shrink-0',
+                      today ? 'bg-[#3B82F6] text-white' : outside ? 'text-zinc-600' : 'text-zinc-300')}>
+                      {format(day, 'd')}
+                    </div>
+                    {!outside && (
+                      <div className="flex flex-wrap gap-0.5 justify-end pt-1 max-w-[60%]">
+                        {techsForDay(day).map(({ tech, half }) => (
+                          <TechDot key={tech.id} colour={tech.colour} half={half} title={techDotTitle(tech, half)} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1">
-                    {dayBookings.slice(0, 3).map((b, bi) => (
-                      <div key={b.id} onClick={e => { e.stopPropagation(); setDetail(b) }}
-                        className={cn('rounded px-1.5 py-0.5 text-[11px] border truncate cursor-pointer', BOOKING_COLORS[bi % BOOKING_COLORS.length])}>
-                        <span className="opacity-70 mr-1">{fmtTime(b.start_time)}</span>{b.title}
-                      </div>
-                    ))}
+                    {dayBookings.slice(0, 3).map((b, bi) => {
+                      const c = techColour(b.technician_id)
+                      return (
+                        <div key={b.id} onClick={e => { e.stopPropagation(); setDetail(b) }}
+                          className={cn('rounded px-1.5 py-0.5 text-[11px] border truncate cursor-pointer flex items-center gap-1', !c && BOOKING_COLORS[bi % BOOKING_COLORS.length])}
+                          style={c ? { backgroundColor: c + '26', borderColor: c + '99', color: c } : undefined}>
+                          <span className="opacity-70">{fmtTime(b.start_time)}</span><span className="truncate">{b.title}</span>
+                        </div>
+                      )
+                    })}
                     {dayBookings.length > 3 && <div className="text-[10px] text-zinc-500 pl-1">+{dayBookings.length - 3} more</div>}
                   </div>
                 </div>
@@ -161,6 +212,13 @@ export default function Calendar() {
               <div key={i} className={cn('border-b border-zinc-800 py-3 px-2 text-center', isSameDay(day, new Date()) ? 'bg-[#1F6FEB]/10' : '')}>
                 <div className="text-xs text-zinc-500">{DAYS[(day.getDay() + 6) % 7]}</div>
                 <div className={cn('text-sm font-semibold mt-0.5', isSameDay(day, new Date()) ? 'text-[#3B82F6]' : 'text-zinc-200')}>{format(day, 'd')}</div>
+                {technicians.length > 0 && (
+                  <div className="flex flex-wrap gap-0.5 justify-center mt-1 min-h-[10px]">
+                    {techsForDay(day).map(({ tech, half }) => (
+                      <TechDot key={tech.id} colour={tech.colour} half={half} title={techDotTitle(tech, half)} />
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             {HOURS.map(hour => (
@@ -172,15 +230,19 @@ export default function Calendar() {
                   <div key={`${di}-${hour}`}
                     className={cn('border-b border-l border-zinc-800/50 h-14 p-0.5 cursor-pointer hover:bg-zinc-800/20 transition-colors', isSameDay(day, new Date()) ? 'bg-[#1F6FEB]/5' : '')}
                     onClick={() => openNewAt(day, hour)}>
-                    {getBookingsForDayHour(day, hour).map((b, bi) => (
-                      <div key={b.id} onClick={e => { e.stopPropagation(); setDetail(b) }}
-                        className={cn('rounded px-1.5 py-1 text-xs border cursor-pointer', BOOKING_COLORS[bi % BOOKING_COLORS.length])}>
-                        <div className="font-medium truncate leading-tight">{b.title}</div>
-                        <div className="flex items-center gap-1 text-[10px] opacity-70 leading-tight">
-                          <Clock className="w-2.5 h-2.5" />{fmtTime(b.start_time)}
+                    {getBookingsForDayHour(day, hour).map((b, bi) => {
+                      const c = techColour(b.technician_id)
+                      return (
+                        <div key={b.id} onClick={e => { e.stopPropagation(); setDetail(b) }}
+                          className={cn('rounded px-1.5 py-1 text-xs border cursor-pointer', !c && BOOKING_COLORS[bi % BOOKING_COLORS.length])}
+                          style={c ? { backgroundColor: c + '26', borderColor: c + '99', color: c } : undefined}>
+                          <div className="font-medium truncate leading-tight">{b.title}</div>
+                          <div className="flex items-center gap-1 text-[10px] opacity-70 leading-tight">
+                            <Clock className="w-2.5 h-2.5" />{fmtTime(b.start_time)}{techName(b.technician_id) ? ' · ' + techName(b.technician_id) : ''}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ))}
               </div>
@@ -217,6 +279,13 @@ export default function Calendar() {
               </select>
             </div>
           </div>
+          <div>
+            <label className="label">Technician</label>
+            <select className="select" value={form.technician_id || ''} onChange={e => setForm(f => ({ ...f, technician_id: e.target.value ? Number(e.target.value) : null }))}>
+              <option value="">Unassigned</option>
+              {technicians.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
           <div><label className="label">Notes</label><textarea className="textarea" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
         </div>
       </Modal>
@@ -224,7 +293,7 @@ export default function Calendar() {
       {/* Booking detail modal */}
       <Modal open={!!detail} onClose={() => setDetail(null)} title="Booking details"
         footer={<>
-          {detail?.job_id && <Link to={`/jobs/${detail.job_id}`} onClick={() => setDetail(null)} className="btn-secondary">Open Job Sheet →</Link>}
+          {detail?.job_id && <Link to={`/jobs/${detail.job_id}`} onClick={() => setDetail(null)} className="btn-primary">Open Job Sheet →</Link>}
           <button onClick={() => { if (detail) handleDelete(detail.id); setDetail(null) }} className="btn-danger">Delete</button>
           <button onClick={() => setDetail(null)} className="btn-secondary">Close</button>
         </>}>
@@ -242,6 +311,13 @@ export default function Calendar() {
               <div><div className="text-zinc-500 text-xs">Customer</div><div className="text-zinc-200">{[detail.first_name, detail.last_name].filter(Boolean).join(' ') || '—'}</div></div>
               <div><div className="text-zinc-500 text-xs">Vehicle</div><div className="text-zinc-200 font-mono text-xs">{[detail.registration, detail.make, detail.model].filter(Boolean).join(' ') || '—'}</div></div>
             </div>
+            {detail.technician_id && (
+              <div><div className="text-zinc-500 text-xs">Technician</div>
+                <div className="flex items-center gap-1.5 text-zinc-200">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: techColour(detail.technician_id) }} />{techName(detail.technician_id)}
+                </div>
+              </div>
+            )}
             {detail.notes && <div><div className="text-zinc-500 text-xs">Notes</div><div className="text-zinc-300 whitespace-pre-wrap">{detail.notes}</div></div>}
           </div>
         )}

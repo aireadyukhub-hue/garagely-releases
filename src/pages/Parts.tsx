@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Search, AlertTriangle, Edit2, Trash2 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import NumberField from '@/components/ui/NumberField'
 import api from '@/lib/api'
 import { Part } from '@/types'
 import { formatCurrency, cn } from '@/lib/utils'
@@ -73,7 +74,7 @@ export default function Parts() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         {[
           { label: 'Total Parts', value: parts.length.toString() },
           { label: 'Low Stock', value: lowStock.length.toString(), alert: lowStock.length > 0 },
@@ -153,10 +154,10 @@ export default function Parts() {
             <div><label className="label">Location</label><input className="input" value={form.location} onChange={F('location')} /></div>
           </div>
           <div className="grid grid-cols-4 gap-3">
-            <div><label className="label">Cost Price</label><input type="number" step="0.01" className="input" value={form.cost_price} onChange={F('cost_price')} /></div>
-            <div><label className="label">Sale Price</label><input type="number" step="0.01" className="input" value={form.sale_price} onChange={F('sale_price')} /></div>
-            <div><label className="label">Stock Qty</label><input type="number" className="input" value={form.stock_quantity} onChange={F('stock_quantity')} /></div>
-            <div><label className="label">Min Stock</label><input type="number" className="input" value={form.min_stock} onChange={F('min_stock')} /></div>
+            <div><label className="label">Cost Price</label><NumberField className="input" value={form.cost_price} onChange={n => setForm(f => ({ ...f, cost_price: n }))} /></div>
+            <div><label className="label">Sale Price</label><NumberField className="input" value={form.sale_price} onChange={n => setForm(f => ({ ...f, sale_price: n }))} /></div>
+            <div><label className="label">Stock Qty</label><NumberField className="input" value={form.stock_quantity} decimal={false} onChange={n => setForm(f => ({ ...f, stock_quantity: n }))} /></div>
+            <div><label className="label">Min Stock</label><NumberField className="input" value={form.min_stock} decimal={false} onChange={n => setForm(f => ({ ...f, min_stock: n }))} /></div>
           </div>
         </div>
       </Modal>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Plus, Search, Filter } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import NumberField from '@/components/ui/NumberField'
 import api from '@/lib/api'
 import { Job, Customer, Vehicle } from '@/types'
 import { formatDate, formatCurrency, JOB_STATUS_COLORS, JOB_STATUS_LABELS, cn } from '@/lib/utils'
@@ -162,7 +163,7 @@ export default function Jobs() {
             <div><label className="label">Booked Date</label><input type="date" className="input" value={form.booked_date} onChange={F('booked_date')} /></div>
             <div><label className="label">Assigned To</label><input className="input" value={form.assigned_to} onChange={F('assigned_to')} /></div>
           </div>
-          <div><label className="label">Labour Rate (£/hr)</label><input type="number" className="input" value={form.labour_rate} onChange={F('labour_rate')} /></div>
+          <div><label className="label">Labour Rate (£/hr)</label><NumberField className="input" value={form.labour_rate} onChange={n => setForm(f => ({ ...f, labour_rate: n }))} /></div>
           <div><label className="label">Description</label><textarea className="textarea" rows={3} value={form.description} onChange={F('description')} /></div>
         </div>
       </Modal>

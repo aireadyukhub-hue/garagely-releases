@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Edit2, Trash2, Minus, FileText, Printer } from 'lucide-react'
+import { ArrowLeft, Edit2, Trash2, Minus, FileText, Printer, CalendarPlus } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import NumberField from '@/components/ui/NumberField'
 import api from '@/lib/api'
 import { Job, LineItem } from '@/types'
 import { formatDate, formatCurrency, printHtml, esc, JOB_STATUS_COLORS, JOB_STATUS_LABELS, cn } from '@/lib/utils'
@@ -20,6 +21,9 @@ export default function JobDetail() {
   const [editingLines, setEditingLines] = useState(false)
   const [draftLines, setDraftLines] = useState<LineItem[]>([])
   const [biz, setBiz] = useState<Record<string, string>>({})
+  const [technicians, setTechnicians] = useState<{ id: number; name: string; colour: string }[]>([])
+  const [slotOpen, setSlotOpen] = useState(false)
+  const [slot, setSlot] = useState({ day: '', time: '09:00', technician_id: null as number | null })
 
   const load = () => api.getJob(Number(id)).then((d: unknown) => {
     const data = d as { job: Job; lineItems: LineItem[] }
@@ -30,7 +34,29 @@ export default function JobDetail() {
   })
 
   useEffect(() => { load() }, [id])
-  useEffect(() => { api.getSettings().then(s => setBiz((s as Record<string, string>) || {})).catch(() => {}) }, [])
+  useEffect(() => {
+    api.getSettings().then(s => setBiz((s as Record<string, string>) || {})).catch(() => {})
+    api.getTechnicians().then(d => setTechnicians(d as { id: number; name: string; colour: string }[])).catch(() => {})
+  }, [])
+
+  const openSlot = () => {
+    setSlot({ day: (job?.booked_date as string) || new Date().toISOString().slice(0, 10), time: '09:00', technician_id: (job as { technician_id?: number | null })?.technician_id ?? null })
+    setSlotOpen(true)
+  }
+  const bookSlot = async () => {
+    if (!job || !slot.day) { setSlotOpen(false); return }
+    const h = Number(slot.time.slice(0, 2))
+    await api.createBooking({
+      title: job.title || `Job ${job.job_number}`,
+      start_time: `${slot.day}T${slot.time}:00`,
+      end_time: `${slot.day}T${String(Math.min(h + 1, 23)).padStart(2, '0')}:${slot.time.slice(3, 5)}:00`,
+      customer_id: job.customer_id, vehicle_id: job.vehicle_id || null, job_id: job.id,
+      technician_id: slot.technician_id, status: 'confirmed',
+    })
+    if (slot.technician_id) { await api.updateJob(job.id, { technician_id: slot.technician_id }); await load() }
+    setSlotOpen(false)
+  }
+  const jobTechName = technicians.find(t => t.id === (job as { technician_id?: number | null })?.technician_id)?.name
 
   const handleStatusChange = async (status: string) => {
     await api.updateJob(Number(id), { status })
@@ -144,6 +170,7 @@ export default function JobDetail() {
           </div>
           <p className="text-sm text-zinc-500 mt-0.5 font-mono">{job.job_number}</p>
         </div>
+        <button onClick={openSlot} className="btn-secondary"><CalendarPlus className="w-4 h-4" /> Add to calendar</button>
         <button onClick={handlePrint} className="btn-secondary"><Printer className="w-4 h-4" /> Print</button>
         {job.status !== 'invoiced' && (
           <button onClick={handleConvertInvoice} disabled={saving} className="btn-secondary text-green-400 hover:text-green-300">
@@ -154,7 +181,7 @@ export default function JobDetail() {
         <button onClick={() => setDeleteOpen(true)} className="btn-danger"><Trash2 className="w-4 h-4" /></button>
       </div>
 
-      <div className="grid grid-cols-3 gap-5 mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
         {/* Job info */}
         <div className="card">
           <div className="card-header"><span className="text-sm font-medium text-zinc-300">Job Details</span></div>
@@ -165,7 +192,13 @@ export default function JobDetail() {
             <div className="flex justify-between"><span className="text-zinc-500">Vehicle</span>
               <Link to={`/vehicles/${job.vehicle_id}`} className="font-mono text-xs text-zinc-300 hover:text-white">{job.registration} {job.make} {job.model}</Link>
             </div>
-            <div className="flex justify-between"><span className="text-zinc-500">Assigned To</span><span className="text-zinc-200">{job.assigned_to || '—'}</span></div>
+            <div className="flex justify-between items-center"><span className="text-zinc-500">Technician</span>
+              <span className="text-zinc-200 flex items-center gap-1.5">
+                {jobTechName ? (<>
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: technicians.find(t => t.name === jobTechName)?.colour }} />{jobTechName}
+                </>) : (job.assigned_to || '—')}
+              </span>
+            </div>
             <div className="flex justify-between"><span className="text-zinc-500">Labour Rate</span><span className="text-zinc-200">£{job.labour_rate}/hr</span></div>
             <div className="flex justify-between"><span className="text-zinc-500">Booked</span><span className="text-zinc-200">{formatDate(job.booked_date)}</span></div>
             {job.started_date && <div className="flex justify-between"><span className="text-zinc-500">Started</span><span className="text-zinc-200">{formatDate(job.started_date)}</span></div>}
@@ -239,8 +272,8 @@ export default function JobDetail() {
                   <option value="other">Other</option>
                 </select>
                 <input className="input text-xs py-1.5" value={item.description} onChange={e => updateLine(idx, 'description', e.target.value)} placeholder="Description" />
-                <input type="number" className="input text-xs py-1.5 text-center" value={item.quantity} step="0.5" onChange={e => updateLine(idx, 'quantity', Number(e.target.value))} placeholder="Qty" />
-                <input type="number" className="input text-xs py-1.5" value={item.unit_price} step="0.01" onChange={e => updateLine(idx, 'unit_price', Number(e.target.value))} placeholder="Unit price" />
+                <NumberField className="input text-xs py-1.5 text-center" value={item.quantity} onChange={n => updateLine(idx, 'quantity', n)} placeholder="Qty" />
+                <NumberField className="input text-xs py-1.5" value={item.unit_price} onChange={n => updateLine(idx, 'unit_price', n)} placeholder="Unit price" />
                 <span className="text-sm font-medium text-zinc-200 text-right">{formatCurrency(item.total)}</span>
                 <button onClick={() => removeLine(idx)} className="btn-ghost p-1 text-red-400 hover:text-red-300">
                   <Minus className="w-3.5 h-3.5" />
@@ -313,7 +346,12 @@ export default function JobDetail() {
                 {Object.entries(JOB_STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
-            <div><label className="label">Assigned To</label><input className="input" value={form.assigned_to || ''} onChange={F('assigned_to')} /></div>
+            <div><label className="label">Technician</label>
+              <select className="select" value={(form as { technician_id?: number | null }).technician_id || ''} onChange={e => setForm(p => ({ ...p, technician_id: e.target.value ? Number(e.target.value) : null } as Partial<Job>))}>
+                <option value="">Unassigned</option>
+                {technicians.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div><label className="label">Booked Date</label><input type="date" className="input" value={form.booked_date || ''} onChange={F('booked_date')} /></div>
@@ -323,6 +361,28 @@ export default function JobDetail() {
           <div><label className="label">Labour Rate (£/hr)</label><input type="number" className="input" value={form.labour_rate || 65} onChange={F('labour_rate')} /></div>
           <div><label className="label">Description</label><textarea className="textarea" rows={3} value={form.description || ''} onChange={F('description')} /></div>
           <div><label className="label">Technician Notes</label><textarea className="textarea" rows={3} value={form.technician_notes || ''} onChange={F('technician_notes')} /></div>
+        </div>
+      </Modal>
+
+      {/* Add to calendar slot picker */}
+      <Modal open={slotOpen} onClose={() => setSlotOpen(false)} title="Add to calendar"
+        footer={<>
+          <button onClick={() => setSlotOpen(false)} className="btn-secondary">Cancel</button>
+          <button onClick={bookSlot} disabled={!slot.day} className="btn-primary">Book in</button>
+        </>}>
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-400">Book <span className="font-mono text-blue-400">{job.job_number}</span> into the calendar.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="label">Date</label><input type="date" className="input" value={slot.day} onChange={e => setSlot(s => ({ ...s, day: e.target.value }))} /></div>
+            <div><label className="label">Start time</label><input type="time" className="input" value={slot.time} onChange={e => setSlot(s => ({ ...s, time: e.target.value }))} /></div>
+          </div>
+          <div>
+            <label className="label">Technician</label>
+            <select className="select" value={slot.technician_id || ''} onChange={e => setSlot(s => ({ ...s, technician_id: e.target.value ? Number(e.target.value) : null }))}>
+              <option value="">Unassigned</option>
+              {technicians.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
         </div>
       </Modal>
 

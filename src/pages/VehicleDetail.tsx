@@ -66,7 +66,7 @@ export default function VehicleDetail() {
         <button onClick={() => setDeleteOpen(true)} className="btn-danger"><Trash2 className="w-4 h-4" /></button>
       </div>
 
-      <div className="grid grid-cols-3 gap-5 mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
         {/* Vehicle info */}
         <div className="card">
           <div className="card-header"><span className="text-sm font-medium text-zinc-300">Details</span></div>

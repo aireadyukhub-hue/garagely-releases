@@ -78,7 +78,7 @@ export default function Reports() {
       ) : (
         <div className="space-y-5">
           {/* Revenue summary */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: 'Revenue (Paid)', value: formatCurrency(revenue?.total || 0) },
               { label: 'Total Jobs', value: totalJobs.toString() },

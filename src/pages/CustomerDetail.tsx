@@ -69,7 +69,7 @@ export default function CustomerDetail() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Contact info */}
         <div className="card">
           <div className="card-header"><span className="text-sm font-medium text-zinc-300">Contact Details</span></div>

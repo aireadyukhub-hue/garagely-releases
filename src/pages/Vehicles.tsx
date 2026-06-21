@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Plus, Search, AlertTriangle, Clock } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import NumberField from '@/components/ui/NumberField'
 import api from '@/lib/api'
 import { Vehicle, Customer } from '@/types'
 import { formatDate, isOverdue, isDueSoon, cn } from '@/lib/utils'
@@ -141,14 +142,14 @@ export default function Vehicles() {
             <div><label className="label">Model</label><input className="input" value={form.model} onChange={F('model')} /></div>
           </div>
           <div className="grid grid-cols-4 gap-3">
-            <div><label className="label">Year</label><input type="number" className="input" value={form.year} onChange={F('year')} /></div>
+            <div><label className="label">Year</label><NumberField className="input" value={form.year} decimal={false} onChange={n => setForm(f => ({ ...f, year: n }))} /></div>
             <div><label className="label">Colour</label><input className="input" value={form.colour} onChange={F('colour')} /></div>
             <div><label className="label">Fuel Type</label>
               <select className="select" value={form.fuel_type} onChange={F('fuel_type')}>
                 {['Petrol', 'Diesel', 'Hybrid', 'Electric', 'LPG'].map(f => <option key={f}>{f}</option>)}
               </select>
             </div>
-            <div><label className="label">Mileage</label><input type="number" className="input" value={form.mileage} onChange={F('mileage')} /></div>
+            <div><label className="label">Mileage</label><NumberField className="input" value={form.mileage} decimal={false} onChange={n => setForm(f => ({ ...f, mileage: n }))} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">MOT Due</label><input type="date" className="input" value={form.mot_due} onChange={F('mot_due')} /></div>

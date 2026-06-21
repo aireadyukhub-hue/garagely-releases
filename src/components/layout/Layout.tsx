@@ -4,20 +4,21 @@ import api from '@/lib/api'
 import {
   LayoutDashboard, Users, Car, Wrench, FileText, FileCheck,
   Calendar, Package, BarChart3, Settings, ChevronLeft, ChevronRight,
-  Quote, LogOut, Truck, LifeBuoy
+  Quote, LogOut, Truck, LifeBuoy, HardHat
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/lib/auth'
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/calendar', label: 'Calendar', icon: Calendar },
+  { path: '/team', label: 'Team', icon: HardHat },
   { path: '/customers', label: 'Customers', icon: Users },
   { path: '/vehicles', label: 'Vehicles', icon: Car },
   // Workflow order: quote → job sheet → invoice
   { path: '/quotes', label: 'Quotes', icon: Quote },
   { path: '/jobs', label: 'Job Sheets', icon: Wrench },
   { path: '/invoices', label: 'Invoices', icon: FileText },
-  { path: '/calendar', label: 'Calendar', icon: Calendar },
   { path: '/parts', label: 'Parts', icon: Package },
   { path: '/suppliers', label: 'Suppliers', icon: Truck },
   { path: '/reports', label: 'Reports', icon: BarChart3 },

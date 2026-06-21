@@ -62,7 +62,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <span className="text-xs text-zinc-500 uppercase tracking-wide font-medium">Revenue (Month)</span>
@@ -102,7 +102,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Today's bookings */}
         <div className="card col-span-2">
           <div className="card-header flex items-center justify-between">

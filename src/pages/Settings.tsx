@@ -3,14 +3,43 @@ import { Save, CheckCircle } from 'lucide-react'
 import api from '@/lib/api'
 import { Settings as SettingsType } from '@/types'
 
+const DAYS_OH = [
+  ['mon', 'Monday'], ['tue', 'Tuesday'], ['wed', 'Wednesday'], ['thu', 'Thursday'],
+  ['fri', 'Friday'], ['sat', 'Saturday'], ['sun', 'Sunday'],
+] as const
+type DayHours = { open: boolean; from: string; to: string }
+type OpeningHours = Record<string, DayHours>
+const DEFAULT_OH: OpeningHours = {
+  mon: { open: true, from: '08:00', to: '17:00' },
+  tue: { open: true, from: '08:00', to: '17:00' },
+  wed: { open: true, from: '08:00', to: '17:00' },
+  thu: { open: true, from: '08:00', to: '17:00' },
+  fri: { open: true, from: '08:00', to: '17:00' },
+  sat: { open: true, from: '09:00', to: '13:00' },
+  sun: { open: false, from: '09:00', to: '13:00' },
+}
+
 export default function Settings() {
   const [settings, setSettings] = useState<Partial<SettingsType>>({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    api.getSettings().then(d => setSettings(d as SettingsType))
+    api.getSettings().then(d => {
+      const s = (d as SettingsType) || {}
+      if (!(s as { opening_hours?: OpeningHours }).opening_hours) {
+        (s as { opening_hours?: OpeningHours }).opening_hours = DEFAULT_OH
+      }
+      setSettings(s)
+    })
   }, [])
+
+  const oh = ((settings as { opening_hours?: OpeningHours }).opening_hours) || DEFAULT_OH
+  const setOH = (day: string, patch: Partial<DayHours>) =>
+    setSettings(s => {
+      const cur = ((s as { opening_hours?: OpeningHours }).opening_hours) || DEFAULT_OH
+      return { ...s, opening_hours: { ...cur, [day]: { ...cur[day], ...patch } } } as Partial<SettingsType>
+    })
 
   const handleSave = async () => {
     setSaving(true)
@@ -111,6 +140,34 @@ export default function Settings() {
                 <input type="number" step="0.5" className="input" value={settings.vat_rate || ''} onChange={F('vat_rate')} />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Opening Hours */}
+        <div className="card">
+          <div className="card-header"><span className="text-sm font-medium text-zinc-300">Opening Hours</span></div>
+          <div className="card-body space-y-2">
+            <p className="text-xs text-zinc-500 mb-1">Sets which days count as working days on the calendar — technicians show as “in” on open days unless they've booked time off.</p>
+            {DAYS_OH.map(([key, label]) => {
+              const d = oh[key] || DEFAULT_OH[key]
+              return (
+                <div key={key} className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 w-32 cursor-pointer">
+                    <input type="checkbox" checked={d.open} onChange={e => setOH(key, { open: e.target.checked })} className="accent-[#F4A523] w-4 h-4" />
+                    <span className={d.open ? 'text-zinc-200 text-sm' : 'text-zinc-500 text-sm'}>{label}</span>
+                  </label>
+                  {d.open ? (
+                    <div className="flex items-center gap-2">
+                      <input type="time" className="input py-1.5 w-28" value={d.from} onChange={e => setOH(key, { from: e.target.value })} />
+                      <span className="text-zinc-600 text-sm">to</span>
+                      <input type="time" className="input py-1.5 w-28" value={d.to} onChange={e => setOH(key, { to: e.target.value })} />
+                    </div>
+                  ) : (
+                    <span className="text-sm text-zinc-600">Closed</span>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
 
