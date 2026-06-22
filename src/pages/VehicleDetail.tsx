@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Edit2, Trash2, AlertTriangle, Clock, Wrench } from 'lucide-react'
+import { ArrowLeft, Edit2, Trash2, AlertTriangle, Clock, Wrench, Search } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import api from '@/lib/api'
 import { Vehicle, Job, Customer } from '@/types'
@@ -16,6 +16,32 @@ export default function VehicleDetail() {
   const [form, setForm] = useState<Partial<Vehicle>>({})
   const [saving, setSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [looking, setLooking] = useState(false)
+  const [lookupMsg, setLookupMsg] = useState<string | null>(null)
+
+  const doLookup = async () => {
+    const reg = String(form.registration || '').trim()
+    if (!reg) return
+    setLooking(true); setLookupMsg(null)
+    try {
+      const v = await api.lookupVehicle(reg)
+      setForm(f => ({
+        ...f,
+        registration: v.registration || f.registration,
+        make: v.make || f.make, model: v.model || f.model,
+        colour: v.colour || f.colour, fuel_type: v.fuel_type || f.fuel_type,
+        engine_size: v.engine_size || f.engine_size,
+        year: v.year || f.year, mot_due: v.mot_due || f.mot_due,
+        mileage: v.mileage || f.mileage,
+      }))
+      const name = [v.make, v.model].filter(Boolean).join(' ')
+      setLookupMsg(name ? `Found: ${name}` : 'Found vehicle')
+    } catch (e) {
+      setLookupMsg((e as Error).message || 'Lookup failed')
+    } finally {
+      setLooking(false)
+    }
+  }
 
   const load = () => api.getVehicle(Number(id)).then((d: unknown) => {
     const data = d as { vehicle: Vehicle; jobs: Job[]; serviceHistory: Job[] }
@@ -176,8 +202,17 @@ export default function VehicleDetail() {
               {customers.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div><label className="label">Registration</label><input className="input uppercase" value={form.registration || ''} onChange={F('registration')} /></div>
+          <div>
+            <label className="label">Registration</label>
+            <div className="flex gap-2">
+              <input className="input uppercase flex-1" value={form.registration || ''} onChange={F('registration')} />
+              <button type="button" onClick={doLookup} disabled={looking || !form.registration} className="btn-secondary whitespace-nowrap">
+                <Search className="w-4 h-4" /> {looking ? 'Looking…' : 'Look up'}
+              </button>
+            </div>
+            {lookupMsg && <p className={cn('text-xs mt-1', lookupMsg.startsWith('Found') ? 'text-green-400' : 'text-amber-400')}>{lookupMsg}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Make</label><input className="input" value={form.make || ''} onChange={F('make')} /></div>
             <div><label className="label">Model</label><input className="input" value={form.model || ''} onChange={F('model')} /></div>
           </div>
@@ -195,7 +230,10 @@ export default function VehicleDetail() {
             <div><label className="label">MOT Due</label><input type="date" className="input" value={form.mot_due || ''} onChange={F('mot_due')} /></div>
             <div><label className="label">Service Due</label><input type="date" className="input" value={form.service_due || ''} onChange={F('service_due')} /></div>
           </div>
-          <div><label className="label">VIN</label><input className="input font-mono" value={form.vin || ''} onChange={F('vin')} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="label">Engine Size (cc)</label><input className="input" value={form.engine_size || ''} onChange={F('engine_size')} /></div>
+            <div><label className="label">VIN</label><input className="input font-mono" value={form.vin || ''} onChange={F('vin')} /></div>
+          </div>
           <div><label className="label">Notes</label><textarea className="textarea" rows={2} value={form.notes || ''} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} /></div>
         </div>
       </Modal>

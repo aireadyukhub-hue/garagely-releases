@@ -40,6 +40,14 @@ export interface Env {
   SITE_URL?: string
   SENDGRID_API_KEY?: string
   SENDGRID_FROM?: string
+  // DVSA MOT History API (free reg lookup) — optional until configured.
+  DVSA_CLIENT_ID?: string
+  DVSA_CLIENT_SECRET?: string
+  DVSA_API_KEY?: string
+  DVSA_TOKEN_URL?: string
+  DVSA_SCOPE_URL?: string
+  // Cloudflare Workers AI binding (free in-app help assistant).
+  AI: Ai
 }
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
@@ -98,6 +106,8 @@ export default {
         case 'create-checkout':    return await createCheckout(request, env)
         case 'get-key-by-session': return await getKeyBySession(request, env, url)
         case 'stripe-webhook':     return await stripeWebhook(request, env)
+        case 'vrm-lookup':         return await vrmLookup(request, env, url)
+        case 'assistant':          return await assistant(request, env)
         case 'admin-api':          return await adminApi(request, env, url)
         case '':
         case 'health':             return json(200, { ok: true, service: 'garagely-backend' })
@@ -427,6 +437,139 @@ async function sendLicenceEmail(env: Env, to: string, key: string, garageName: s
     if (!res.ok) console.error('SendGrid error:', res.status, await res.text())
   } catch (err) {
     console.error('Licence email failed:', (err as Error).message)
+  }
+}
+
+// ── vrm-lookup (DVSA MOT History API) ────────────────────────────────────────
+// Free UK vehicle lookup: returns make, model, colour, fuel, engine size, year
+// and recent MOT history from a registration. OAuth2 client-credentials flow.
+let dvsaToken: { value: string; exp: number } | null = null
+
+async function getDvsaToken(env: Env): Promise<string> {
+  if (dvsaToken && dvsaToken.exp > Date.now() + 60_000) return dvsaToken.value
+  const body = new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: env.DVSA_CLIENT_ID || '',
+    client_secret: env.DVSA_CLIENT_SECRET || '',
+    scope: env.DVSA_SCOPE_URL || '',
+  })
+  const res = await fetch(env.DVSA_TOKEN_URL || '', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  })
+  if (!res.ok) throw new Error('DVSA token request failed')
+  const j: any = await res.json()
+  dvsaToken = { value: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 }
+  return dvsaToken.value
+}
+
+async function vrmLookup(request: Request, env: Env, url: URL): Promise<Response> {
+  const reg = (url.searchParams.get('reg') || '').replace(/\s+/g, '').toUpperCase()
+  if (!reg) return json(400, { error: 'reg required' })
+  if (!env.DVSA_API_KEY || !env.DVSA_CLIENT_ID) {
+    return json(503, { error: 'Vehicle lookup is not set up yet.' })
+  }
+  try {
+    const token = await getDvsaToken(env)
+    const res = await fetch(
+      `https://history.mot.api.gov.uk/v1/trade/vehicles/registration/${encodeURIComponent(reg)}`,
+      { headers: { Authorization: `Bearer ${token}`, 'x-api-key': env.DVSA_API_KEY, Accept: 'application/json' } },
+    )
+    if (res.status === 404) return json(404, { error: 'No vehicle found for that registration.' })
+    if (!res.ok) return json(502, { error: 'Lookup service error. Try again shortly.' })
+    const v: any = await res.json()
+    const tests = Array.isArray(v.motTests) ? v.motTests : []
+    const latest = tests[0] || null
+    const year = String(v.manufactureDate || v.firstUsedDate || v.registrationDate || '').slice(0, 4)
+    return json(200, {
+      registration: v.registration || reg,
+      make: v.make || '',
+      model: v.model || '',
+      colour: v.primaryColour || '',
+      fuel_type: v.fuelType || '',
+      engine_size: v.engineSize ? String(v.engineSize) : '',
+      year: year ? Number(year) : null,
+      mot_due: latest?.expiryDate || '',
+      mileage: latest?.odometerValue ? Number(String(latest.odometerValue).replace(/\D/g, '')) || null : null,
+      mot_history: tests.slice(0, 5).map((m: any) => ({
+        date: m.completedDate, result: m.testResult, mileage: m.odometerValue, expiry: m.expiryDate,
+      })),
+    })
+  } catch {
+    return json(502, { error: 'Lookup failed. Try again shortly.' })
+  }
+}
+
+// ── assistant (Cloudflare Workers AI help bot) ───────────────────────────────
+const GARAGELY_GUIDE = `You are the GarageLY in-app help assistant. GarageLY is garage/workshop
+management software (desktop + web). Answer ONLY questions about how to use GarageLY.
+Be brief, friendly and practical. Use UK English. Give step-by-step directions naming the
+exact menu/button. If you don't know, say so and suggest using "Help & Feedback" to contact support.
+Never invent features that aren't listed here.
+
+THE LEFT SIDEBAR (top to bottom): Dashboard, Calendar, Team, Customers, Vehicles, Quotes,
+Job Sheets, Invoices, Parts, Suppliers, Reports, Settings, Help & Feedback.
+
+WHAT EACH DOES & HOW TO DO THINGS:
+- Dashboard: overview — revenue this month, outstanding invoices, today's bookings, MOT/service due, recent activity.
+- Calendar: bookings in Day/Week/Month. "New Booking" (top right) to add one — pick title, date/time, customer, vehicle, technician. Coloured dots per day show which technicians are working; a booking takes its technician's colour. Click a booking to see details and "Open Job Sheet".
+- Team: add technicians ("New Technician"), each with a colour. In the technician form set their Working days and Hours (shift pattern). "Book time off" books a full or half day off (e.g. doctor's). The calendar reflects all of this.
+- Customers: add/edit customers; click one for their detail, vehicles and history. Call button next to phone numbers.
+- Vehicles: add/edit vehicles. The "Look up" button next to Registration auto-fills make/model/colour/fuel/engine size/MOT from the reg (if reg lookup is set up).
+- Quotes: create estimates with line items. "+ Labour" adds a labour line at your labour rate. Convert a quote to a Job Sheet or straight to an Invoice using the arrows in the Actions column. Converting to a job pops a "Book this job in?" calendar slot picker.
+- Job Sheets: the work in progress. Open one to edit line items, add Technician Notes, assign a Technician, "Add to calendar", "Print" a clean job sheet, or "Create Invoice" (technician notes carry over to the invoice notes).
+- Invoices: bills. Statuses draft/unpaid/paid/overdue. Print/PDF.
+- Parts: parts inventory with cost/sale price and stock levels (low-stock warnings).
+- Suppliers: supplier contacts (phone with call button, website, account number).
+- Reports: revenue and jobs reports over a date range.
+- Settings: Business Details (name, address, phone, email, VAT number); Logo & Branding (upload your logo — shows top-centre); Rates & Pricing (default Labour Rate and VAT Rate); Opening Hours (per-day open/closed + times — drives the calendar working days); Invoice & Quote Numbering (prefixes and next numbers). Remember to click "Save Changes".
+- Help & Feedback: ask this assistant, or send Feedback/ideas or a Support request to the GarageLY team.
+
+COMMON ANSWERS:
+- Change VAT or labour rate → Settings → Rates & Pricing.
+- Add your logo → Settings → Logo & Branding → Upload logo → Save Changes.
+- Set opening hours → Settings → Opening Hours.
+- Add a mechanic and their shifts → Team → New Technician (set working days + hours).
+- Book someone off → Team → Book time off.
+- Book a job into the calendar → open the Job Sheet → "Add to calendar" (or convert a quote to a job and use the slot picker).
+- Quote → job → invoice flow: Quotes (convert) → Job Sheets (do the work, add notes) → Create Invoice.
+
+IMPORTANT RULES:
+- Do NOT invent field names, buttons or steps that aren't described above. If you're not certain of the exact steps, give your best general direction and tell them which screen to open — don't make up specifics.
+- When your answer is about a specific screen, finish your reply with a line exactly like:
+GOTO: /invoices
+using ONE of these paths only: /dashboard /calendar /team /customers /vehicles /quotes /jobs /invoices /parts /suppliers /reports /settings /help. Include at most one GOTO line, only when there's a clear screen to open, and do not refer to the GOTO line in your prose.`
+
+async function assistant(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'POST') return json(405, { error: 'Method not allowed' })
+  // Only logged-in users — protects the free AI allowance from abuse.
+  const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
+  if (!token) return json(401, { error: 'Please sign in to use the assistant.' })
+  const { data: u, error: authErr } = await sb(env).auth.getUser(token)
+  if (authErr || !u?.user) return json(401, { error: 'Your session expired — sign in again.' })
+
+  let body: any = {}
+  try { body = await request.json() } catch { return json(400, { error: 'Invalid request' }) }
+  const question = String(body.question || '').slice(0, 1000).trim()
+  if (!question) return json(400, { error: 'Ask a question.' })
+  const history = Array.isArray(body.history) ? body.history.slice(-6) : []
+
+  const messages = [
+    { role: 'system', content: GARAGELY_GUIDE },
+    ...history.map((h: any) => ({
+      role: h.role === 'user' ? 'user' : 'assistant',
+      content: String(h.content || '').slice(0, 1500),
+    })),
+    { role: 'user', content: question },
+  ]
+  try {
+    const r: any = await env.AI.run('@cf/meta/llama-3.2-3b-instruct', { messages, max_tokens: 400 })
+    const answer = (r?.response || '').trim()
+    return json(200, { answer: answer || "Sorry, I couldn't find an answer. Try rephrasing, or send a support request from Help & Feedback." })
+  } catch (e) {
+    console.error('AI error:', (e as Error)?.message)
+    return json(502, { error: 'The assistant is busy right now — please try again in a moment.' })
   }
 }
 

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/lib/auth'
+import AssistantWidget from '@/components/AssistantWidget'
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -139,6 +140,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </main>
+
+      {/* Timmy the 10mm — the always-on AI helper */}
+      <AssistantWidget />
     </div>
   )
 }

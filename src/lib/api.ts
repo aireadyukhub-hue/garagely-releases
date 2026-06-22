@@ -6,6 +6,9 @@
 import { supabase, getGarageId } from './supabase'
 import { cached } from './cache'
 
+// Backend Worker (for non-Supabase calls like the vehicle reg lookup).
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://garagely-backend.garagely.workers.dev'
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Row = Record<string, any>
@@ -142,6 +145,31 @@ const api = {
   deleteVehicle: async (id: number) => {
     unwrap(await supabase.from('vehicles').delete().eq('id', id).select())
     return { success: true }
+  },
+
+  // Free reg lookup via the Worker (DVSA MOT History API).
+  lookupVehicle: async (reg: string) => {
+    const res = await fetch(`${BACKEND}/vrm-lookup?reg=${encodeURIComponent(reg)}`)
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((j as { error?: string }).error || 'Lookup failed')
+    return j as {
+      registration: string; make: string; model: string; colour: string
+      fuel_type: string; engine_size: string; year: number | null; mot_due: string; mileage: number | null
+    }
+  },
+
+  // AI help assistant (Cloudflare Workers AI via the Worker).
+  askAssistant: async (question: string, history: { role: 'user' | 'assistant'; content: string }[] = []) => {
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    const res = await fetch(`${BACKEND}/assistant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ question, history }),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((j as { error?: string }).error || 'Assistant unavailable')
+    return (j as { answer: string }).answer
   },
 
   // ─── Jobs ─────────────────────────────────────────────────────────────────

@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react'
-import { Send, CheckCircle } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Send, CheckCircle, Sparkles, Loader2 } from 'lucide-react'
 import api from '@/lib/api'
 import { formatDateTime, cn } from '@/lib/utils'
+import { parseGoto, ROUTE_LABELS } from '@/components/AssistantWidget'
 
 interface Submission { id: number; type: string; subject?: string; message: string; status: string; created_at: string }
+type ChatMsg = { role: 'user' | 'assistant'; content: string; goto?: string | null }
+const SUGGESTIONS = [
+  'How do I add a technician?',
+  'Where do I change the VAT rate?',
+  'How do I book a job into the calendar?',
+  'How do I add my logo?',
+]
 
 const STATUS_COLORS: Record<string, string> = {
   new: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -19,8 +28,33 @@ export default function Help() {
   const [sent, setSent] = useState(false)
   const [items, setItems] = useState<Submission[]>([])
 
+  const [chat, setChat] = useState<ChatMsg[]>([])
+  const [q, setQ] = useState('')
+  const [asking, setAsking] = useState(false)
+  const chatEnd = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+
   const load = () => api.getSubmissions().then(d => setItems(d as Submission[])).catch(() => {})
   useEffect(() => { load() }, [])
+  useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [chat, asking])
+
+  const ask = async (text?: string) => {
+    const question = (text ?? q).trim()
+    if (!question || asking) return
+    setQ('')
+    const history = chat.slice(-6)
+    setChat(c => [...c, { role: 'user', content: question }])
+    setAsking(true)
+    try {
+      const answer = await api.askAssistant(question, history)
+      const { text, goto } = parseGoto(answer)
+      setChat(c => [...c, { role: 'assistant', content: text, goto }])
+    } catch (e) {
+      setChat(c => [...c, { role: 'assistant', content: (e as Error).message || 'Sorry, something went wrong. Try again.' }])
+    } finally {
+      setAsking(false)
+    }
+  }
 
   const submit = async () => {
     if (!message.trim()) return
@@ -34,6 +68,48 @@ export default function Help() {
   return (
     <div className="pt-2 max-w-3xl">
       <div className="page-header"><h1 className="page-title">Help & Feedback</h1></div>
+
+      {/* AI assistant */}
+      <div className="card mb-5">
+        <div className="card-header flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-[#F4A523]" />
+          <span className="text-sm font-medium text-zinc-300">Ask the assistant</span>
+          <span className="text-xs text-zinc-600 ml-auto">Answers how-to questions about GarageLY</span>
+        </div>
+        <div className="card-body space-y-3">
+          {chat.length === 0 ? (
+            <div className="text-sm text-zinc-500">
+              Ask me anything about using GarageLY — where a setting is, or how to do something.
+              <div className="flex flex-wrap gap-2 mt-3">
+                {SUGGESTIONS.map(s => (
+                  <button key={s} onClick={() => ask(s)} className="text-xs px-2.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:border-[#F4A523]/50 hover:text-white transition-colors">{s}</button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+              {chat.map((m, i) => (
+                <div key={i} className={cn(m.role === 'user' ? 'text-right' : '')}>
+                  <div className={cn('inline-block rounded-xl px-3 py-2 max-w-[85%] text-sm whitespace-pre-wrap text-left',
+                    m.role === 'user' ? 'bg-[#F4A523]/15 text-zinc-100' : 'bg-zinc-800/70 text-zinc-200')}>
+                    {m.content}
+                  </div>
+                  {m.goto && (
+                    <div><button onClick={() => navigate(m.goto!)} className="btn-primary text-xs py-1 px-2.5 mt-1.5">Take me to {ROUTE_LABELS[m.goto]} →</button></div>
+                  )}
+                </div>
+              ))}
+              {asking && <div className="text-sm text-zinc-500 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Thinking…</div>}
+              <div ref={chatEnd} />
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input className="input flex-1" value={q} onChange={e => setQ(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') ask() }} placeholder="e.g. How do I add a technician?" />
+            <button onClick={() => ask()} disabled={asking || !q.trim()} className="btn-primary"><Send className="w-4 h-4" /></button>
+          </div>
+        </div>
+      </div>
 
       <div className="card mb-5">
         <div className="card-body space-y-4">
