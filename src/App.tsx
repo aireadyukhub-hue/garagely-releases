@@ -11,6 +11,7 @@ import JobDetail from './pages/JobDetail'
 import Invoices from './pages/Invoices'
 import InvoiceDetail from './pages/InvoiceDetail'
 import Quotes from './pages/Quotes'
+import PresetJobs from './pages/PresetJobs'
 import Calendar from './pages/Calendar'
 import Parts from './pages/Parts'
 import Suppliers from './pages/Suppliers'
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/:id" element={<InvoiceDetail />} />
           <Route path="/quotes" element={<Quotes />} />
+          <Route path="/preset-jobs" element={<PresetJobs />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/parts" element={<Parts />} />
           <Route path="/suppliers" element={<Suppliers />} />

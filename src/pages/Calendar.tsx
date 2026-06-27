@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import NewCustomerButton from '@/components/NewCustomerButton'
 import api from '@/lib/api'
 import { Booking, Customer, Vehicle } from '@/types'
 import { cn } from '@/lib/utils'
@@ -259,13 +260,16 @@ export default function Calendar() {
         </>}>
         <div className="space-y-4">
           <div><label className="label">Title *</label><input className="input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. MOT - Ford Focus BD21 XYZ" /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">Start</label><input type="datetime-local" className="input" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} /></div>
             <div><label className="label">End</label><input type="datetime-local" className="input" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="label">Customer</label>
+              <div className="flex items-center justify-between">
+                <label className="label">Customer</label>
+                <NewCustomerButton onCreated={c => { setCustomers(cs => [...cs, c]); setForm(f => ({ ...f, customer_id: c.id, vehicle_id: 0 })) }} />
+              </div>
               <select className="select" value={form.customer_id || ''} onChange={e => setForm(f => ({ ...f, customer_id: Number(e.target.value), vehicle_id: 0 }))}>
                 <option value="">Select…</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
@@ -303,11 +307,11 @@ export default function Calendar() {
               <div className="text-zinc-500 text-xs">Title</div>
               <div className="text-zinc-100 font-medium text-base">{detail.title}</div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><div className="text-zinc-500 text-xs">Date</div><div className="text-zinc-200">{format(parseISO(detail.start_time), 'EEE d MMM yyyy')}</div></div>
               <div><div className="text-zinc-500 text-xs">Time</div><div className="text-zinc-200">{fmtTime(detail.start_time)} – {fmtTime(detail.end_time)}</div></div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><div className="text-zinc-500 text-xs">Customer</div><div className="text-zinc-200">{[detail.first_name, detail.last_name].filter(Boolean).join(' ') || '—'}</div></div>
               <div><div className="text-zinc-500 text-xs">Vehicle</div><div className="text-zinc-200 font-mono text-xs">{[detail.registration, detail.make, detail.model].filter(Boolean).join(' ') || '—'}</div></div>
             </div>

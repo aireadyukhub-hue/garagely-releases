@@ -104,7 +104,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Today's bookings */}
-        <div className="card col-span-2">
+        <div className="card lg:col-span-2">
           <div className="card-header flex items-center justify-between">
             <span className="text-sm font-medium text-zinc-200">Today's Bookings</span>
             <Link to="/calendar" className="text-xs text-blue-400 hover:text-blue-300">View calendar →</Link>
@@ -183,7 +183,7 @@ export default function Dashboard() {
       </div>
 
       {/* Active jobs + recent activity */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="card">
           <div className="card-header flex items-center justify-between">
             <span className="text-sm font-medium text-zinc-200">Active Jobs</span>

@@ -57,8 +57,8 @@ export default function Customers() {
       </div>
 
       {/* Table */}
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-zinc-800">
               <th className="text-left px-5 py-3 text-xs text-zinc-500 font-medium uppercase tracking-wide">Name</th>
@@ -116,17 +116,17 @@ export default function Customers() {
         }
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">First Name *</label><input className="input" value={form.first_name} onChange={F('first_name')} /></div>
             <div><label className="label">Last Name *</label><input className="input" value={form.last_name} onChange={F('last_name')} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">Email</label><input type="email" className="input" value={form.email} onChange={F('email')} /></div>
             <div><label className="label">Phone</label><input className="input" value={form.phone} onChange={F('phone')} /></div>
           </div>
           <div><label className="label">Mobile</label><input className="input" value={form.mobile} onChange={F('mobile')} /></div>
           <div><label className="label">Address</label><input className="input" value={form.address} onChange={F('address')} /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">City</label><input className="input" value={form.city} onChange={F('city')} /></div>
             <div><label className="label">Postcode</label><input className="input" value={form.postcode} onChange={F('postcode')} /></div>
           </div>

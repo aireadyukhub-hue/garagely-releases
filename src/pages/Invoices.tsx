@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Plus, Search, Download } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import NumberField from '@/components/ui/NumberField'
+import NewCustomerButton from '@/components/NewCustomerButton'
 import api from '@/lib/api'
 import { Invoice, Customer, Job } from '@/types'
 import { formatDate, formatCurrency, INVOICE_STATUS_COLORS, INVOICE_STATUS_LABELS, cn, calcTotals } from '@/lib/utils'
@@ -88,8 +89,8 @@ export default function Invoices() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-zinc-800">
               {['Invoice #', 'Customer', 'Job', 'Status', 'Subtotal', 'VAT', 'Total', 'Due', 'Paid'].map(h => (
@@ -133,9 +134,12 @@ export default function Invoices() {
         }
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="label">Customer *</label>
+              <div className="flex items-center justify-between">
+                <label className="label">Customer *</label>
+                <NewCustomerButton onCreated={c => { setCustomers(cs => [...cs, c]); setForm(f => ({ ...f, customer_id: c.id })) }} />
+              </div>
               <select className="select" value={form.customer_id || ''} onChange={e => setForm(f => ({ ...f, customer_id: Number(e.target.value) }))}>
                 <option value="">Select…</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
@@ -151,7 +155,7 @@ export default function Invoices() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="label">Status</label>
               <select className="select" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>

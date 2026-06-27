@@ -212,11 +212,11 @@ export default function VehicleDetail() {
             </div>
             {lookupMsg && <p className={cn('text-xs mt-1', lookupMsg.startsWith('Found') ? 'text-green-400' : 'text-amber-400')}>{lookupMsg}</p>}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">Make</label><input className="input" value={form.make || ''} onChange={F('make')} /></div>
             <div><label className="label">Model</label><input className="input" value={form.model || ''} onChange={F('model')} /></div>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div><label className="label">Year</label><input type="number" className="input" value={form.year || ''} onChange={F('year')} /></div>
             <div><label className="label">Colour</label><input className="input" value={form.colour || ''} onChange={F('colour')} /></div>
             <div><label className="label">Fuel</label>
@@ -226,11 +226,11 @@ export default function VehicleDetail() {
             </div>
             <div><label className="label">Mileage</label><input type="number" className="input" value={form.mileage || ''} onChange={F('mileage')} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">MOT Due</label><input type="date" className="input" value={form.mot_due || ''} onChange={F('mot_due')} /></div>
             <div><label className="label">Service Due</label><input type="date" className="input" value={form.service_due || ''} onChange={F('service_due')} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">Engine Size (cc)</label><input className="input" value={form.engine_size || ''} onChange={F('engine_size')} /></div>
             <div><label className="label">VIN</label><input className="input font-mono" value={form.vin || ''} onChange={F('vin')} /></div>
           </div>

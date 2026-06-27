@@ -437,6 +437,20 @@ const api = {
     return { success: true }
   },
 
+  // Find local motor factors near a postcode (via the Worker → Google Places).
+  searchLocalSuppliers: async (postcode: string, radius = 10) => {
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    const res = await fetch(`${BACKEND}/places-search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ postcode, radius }),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((j as { error?: string }).error || 'Search failed')
+    return j as { suppliers: Array<{ name: string; address: string; phone: string; website: string; distance: number | null }>; error?: string }
+  },
+
   // ─── Suppliers ────────────────────────────────────────────────────────────
   getSuppliers: () =>
     cached('suppliers', async () =>
@@ -458,6 +472,63 @@ const api = {
     return { success: true }
   },
 
+  // ─── Preset (pre-quoted) jobs ─────────────────────────────────────────────
+  getPresetJobs: () =>
+    cached('presetJobs', async () => {
+      const jobs = unwrap(
+        await supabase.from('preset_jobs').select('*').eq('active', true).order('sort_order').order('name'),
+      ) as Row[]
+      const items = unwrap(
+        await supabase.from('preset_job_items').select('*').order('sort_order').order('id'),
+      ) as Row[]
+      return jobs.map((j) => ({ ...j, items: items.filter((it) => it.preset_job_id === j.id) }))
+    }),
+
+  createPresetJob: async (data: any) => {
+    const garage_id = await getGarageId()
+    const { items = [], ...rest } = data ?? {}
+    const job = unwrap(
+      await supabase.from('preset_jobs').insert({ ...rest, garage_id }).select().single(),
+    ) as Row
+    if (items.length) {
+      unwrap(
+        await supabase.from('preset_job_items').insert(
+          items.map((it: any, i: number) => ({
+            garage_id, preset_job_id: job.id, type: it.type || 'part',
+            description: it.description || '', quantity: Number(it.quantity) || 1,
+            unit_price: Number(it.unit_price) || 0, sort_order: i,
+          })),
+        ).select(),
+      )
+    }
+    return job
+  },
+
+  updatePresetJob: async (id: number, data: any) => {
+    const garage_id = await getGarageId()
+    const { id: _omit, items = [], created_at: _c, updated_at: _u, garage_id: _g, ...rest } = data ?? {}
+    unwrap(await supabase.from('preset_jobs').update(rest).eq('id', id).select())
+    // Replace line items wholesale (simplest reliable approach).
+    unwrap(await supabase.from('preset_job_items').delete().eq('preset_job_id', id).select())
+    if (items.length) {
+      unwrap(
+        await supabase.from('preset_job_items').insert(
+          items.map((it: any, i: number) => ({
+            garage_id, preset_job_id: id, type: it.type || 'part',
+            description: it.description || '', quantity: Number(it.quantity) || 1,
+            unit_price: Number(it.unit_price) || 0, sort_order: i,
+          })),
+        ).select(),
+      )
+    }
+    return { success: true }
+  },
+
+  deletePresetJob: async (id: number) => {
+    unwrap(await supabase.from('preset_jobs').delete().eq('id', id).select())
+    return { success: true }
+  },
+
   // ─── Feedback / support submissions ───────────────────────────────────────
   getSubmissions: () =>
     cached('submissions', async () =>
@@ -471,7 +542,16 @@ const api = {
 
   // ─── Dashboard & reports ──────────────────────────────────────────────────
   getDashboardData: () =>
-    cached('dashboard', async () => unwrap(await supabase.rpc('dashboard_data'))),
+    cached('dashboard', async () => {
+      const d = unwrap(await supabase.rpc('dashboard_data')) as Row
+      // Belt-and-braces: never raise an MOT/service alert for a vehicle with no
+      // (or malformed) date entered. Mirrors the SQL guard in migration 0008 so
+      // the fix is live even before that migration is applied.
+      const valid = (s: any) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}/.test(s)
+      if (d && Array.isArray(d.motAlerts)) d.motAlerts = d.motAlerts.filter((v: Row) => valid(v.mot_due))
+      if (d && Array.isArray(d.serviceAlerts)) d.serviceAlerts = d.serviceAlerts.filter((v: Row) => valid(v.service_due))
+      return d
+    }),
 
   getRevenueReport: (from: string, to: string) =>
     cached(`report:revenue:${from}:${to}`, async () =>

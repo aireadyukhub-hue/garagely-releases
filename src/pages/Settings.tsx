@@ -74,8 +74,13 @@ export default function Settings() {
     reader.readAsDataURL(file)
   }
 
+  const NUMERIC = ['vat_rate', 'labour_rate', 'invoice_next', 'quote_next', 'reminder_lead_days']
   const F = (field: keyof SettingsType) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setSettings(s => ({ ...s, [field]: ['vat_rate', 'labour_rate', 'invoice_next', 'quote_next'].includes(field) ? Number(e.target.value) : e.target.value }))
+    setSettings(s => ({ ...s, [field]: NUMERIC.includes(field) ? Number(e.target.value) : e.target.value }))
+  // Text-area / select handler (no numeric coercion).
+  const T = (field: keyof SettingsType) => (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) =>
+    setSettings(s => ({ ...s, [field]: e.target.value }))
+  const ACCENT_PRESETS = ['#1F6FEB', '#F4A523', '#16A34A', '#DC2626', '#9333EA', '#0EA5E9', '#EC4899', '#F97316']
 
   return (
     <div className="pt-2 max-w-2xl">
@@ -93,7 +98,7 @@ export default function Settings() {
           <div className="card-body space-y-4">
             <div><label className="label">Business Name</label><input className="input" value={settings.business_name || ''} onChange={F('business_name')} /></div>
             <div><label className="label">Address</label><input className="input" value={settings.address || ''} onChange={F('address')} /></div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className="label">Phone</label><input className="input" value={settings.phone || ''} onChange={F('phone')} /></div>
               <div><label className="label">Email</label><input type="email" className="input" value={settings.email || ''} onChange={F('email')} /></div>
             </div>
@@ -123,6 +128,30 @@ export default function Settings() {
               </div>
             </div>
             <p className="text-xs text-zinc-600">Remember to click <span className="text-zinc-400">Save Changes</span> after uploading.</p>
+
+            <div className="pt-3 border-t border-zinc-800">
+              <label className="label">Accent colour</label>
+              <p className="text-xs text-zinc-500 mb-2">Used for buttons and the active menu item across the app.</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {ACCENT_PRESETS.map(c => (
+                  <button key={c} onClick={() => setSettings(s => ({ ...s, accent_color: c }))}
+                    className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
+                    style={{ background: c, borderColor: (settings.accent_color || '#1F6FEB') === c ? '#fff' : 'transparent' }}
+                    title={c} />
+                ))}
+                <input type="color" value={settings.accent_color || '#1F6FEB'}
+                  onChange={e => setSettings(s => ({ ...s, accent_color: e.target.value }))}
+                  className="w-9 h-9 rounded-lg bg-transparent border border-zinc-700 cursor-pointer" title="Custom colour" />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-zinc-800">
+              <label className="label">Interface density</label>
+              <select className="select max-w-xs" value={settings.ui_density || 'comfortable'} onChange={T('ui_density')}>
+                <option value="comfortable">Comfortable (default)</option>
+                <option value="compact">Compact (tighter spacing)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -130,7 +159,7 @@ export default function Settings() {
         <div className="card">
           <div className="card-header"><span className="text-sm font-medium text-zinc-300">Rates & Pricing</span></div>
           <div className="card-body space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="label">Default Labour Rate (£/hr)</label>
                 <input type="number" step="0.5" className="input" value={settings.labour_rate || ''} onChange={F('labour_rate')} />
@@ -175,7 +204,7 @@ export default function Settings() {
         <div className="card">
           <div className="card-header"><span className="text-sm font-medium text-zinc-300">Invoice & Quote Numbering</span></div>
           <div className="card-body space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="label">Invoice Prefix</label>
                 <input className="input font-mono" value={settings.invoice_prefix || ''} onChange={F('invoice_prefix')} />
@@ -185,7 +214,7 @@ export default function Settings() {
                 <input type="number" className="input font-mono" value={settings.invoice_next || ''} onChange={F('invoice_next')} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="label">Quote Prefix</label>
                 <input className="input font-mono" value={settings.quote_prefix || ''} onChange={F('quote_prefix')} />
@@ -201,13 +230,71 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* Business defaults */}
+        <div className="card">
+          <div className="card-header"><span className="text-sm font-medium text-zinc-300">Business Defaults</span></div>
+          <div className="card-body space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="label">Currency</label>
+                <select className="select" value={settings.currency || 'GBP'} onChange={T('currency')}>
+                  <option value="GBP">£ GBP</option>
+                  <option value="EUR">€ EUR</option>
+                  <option value="USD">$ USD</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">MOT / service reminder lead time (days)</label>
+                <input type="number" className="input" value={settings.reminder_lead_days ?? 30} onChange={F('reminder_lead_days')} />
+              </div>
+            </div>
+            <div>
+              <label className="label">Default payment terms</label>
+              <input className="input" value={settings.payment_terms || ''} onChange={F('payment_terms')} placeholder="e.g. Payment due within 14 days of invoice" />
+            </div>
+            <div>
+              <label className="label">Bank details (shown on invoices)</label>
+              <textarea className="textarea" rows={3} value={settings.bank_details || ''} onChange={T('bank_details')} placeholder={'Sort code: 00-00-00\nAccount: 00000000\nName: …'} />
+            </div>
+          </div>
+        </div>
+
+        {/* Documents & templates */}
+        <div className="card">
+          <div className="card-header"><span className="text-sm font-medium text-zinc-300">Documents &amp; Templates</span></div>
+          <div className="card-body space-y-4">
+            <p className="text-xs text-zinc-500">These fill in automatically on new quotes, invoices and printed job sheets — saving you re-typing the same lines.</p>
+            <div>
+              <label className="label">Default quote notes</label>
+              <textarea className="textarea" rows={2} value={settings.quote_notes || ''} onChange={T('quote_notes')} placeholder="Prefilled in the Notes box on every new quote" />
+            </div>
+            <div>
+              <label className="label">Default invoice notes</label>
+              <textarea className="textarea" rows={2} value={settings.invoice_notes || ''} onChange={T('invoice_notes')} placeholder="Prefilled in the Notes box on every new invoice" />
+            </div>
+            <div>
+              <label className="label">Terms &amp; conditions</label>
+              <textarea className="textarea" rows={3} value={settings.terms || ''} onChange={T('terms')} placeholder="Printed at the foot of quotes and invoices" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="label">Invoice / quote footer</label>
+                <input className="input" value={settings.invoice_footer || ''} onChange={F('invoice_footer')} placeholder="e.g. Thank you for your business" />
+              </div>
+              <div>
+                <label className="label">Job sheet footer</label>
+                <input className="input" value={settings.jobsheet_footer || ''} onChange={F('jobsheet_footer')} placeholder="e.g. All work guaranteed for 12 months" />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* App info */}
         <div className="card">
           <div className="card-header"><span className="text-sm font-medium text-zinc-300">App Info</span></div>
           <div className="card-body space-y-2 text-sm text-zinc-400">
-            <div className="flex justify-between"><span>Version</span><span className="text-zinc-300">1.0.0</span></div>
-            <div className="flex justify-between"><span>Database</span><span className="text-zinc-300">SQLite (local)</span></div>
-            <div className="flex justify-between"><span>Stack</span><span className="text-zinc-300">Electron + React + TypeScript</span></div>
+            <div className="flex justify-between"><span>Database</span><span className="text-zinc-300">Cloud (Supabase) — syncs across desktop &amp; web</span></div>
+            <div className="flex justify-between"><span>Stack</span><span className="text-zinc-300">React + TypeScript</span></div>
           </div>
         </div>
       </div>

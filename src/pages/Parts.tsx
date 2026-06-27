@@ -93,8 +93,8 @@ export default function Parts() {
         <input className="input pl-9" placeholder="Search parts…" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-zinc-800">
               {['SKU', 'Name', 'Supplier', 'Stock', 'Cost', 'Sale', 'Margin', 'Actions'].map(h => (
@@ -144,16 +144,16 @@ export default function Parts() {
         }
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">Name *</label><input className="input" value={form.name} onChange={F('name')} /></div>
             <div><label className="label">SKU</label><input className="input font-mono" value={form.sku} onChange={F('sku')} /></div>
           </div>
           <div><label className="label">Description</label><input className="input" value={form.description} onChange={F('description')} /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">Supplier</label><input className="input" value={form.supplier} onChange={F('supplier')} /></div>
             <div><label className="label">Location</label><input className="input" value={form.location} onChange={F('location')} /></div>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div><label className="label">Cost Price</label><NumberField className="input" value={form.cost_price} onChange={n => setForm(f => ({ ...f, cost_price: n }))} /></div>
             <div><label className="label">Sale Price</label><NumberField className="input" value={form.sale_price} onChange={n => setForm(f => ({ ...f, sale_price: n }))} /></div>
             <div><label className="label">Stock Qty</label><NumberField className="input" value={form.stock_quantity} decimal={false} onChange={n => setForm(f => ({ ...f, stock_quantity: n }))} /></div>

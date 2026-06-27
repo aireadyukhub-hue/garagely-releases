@@ -32,6 +32,7 @@ export default function Team() {
   // Book time-off form
   const [offTech, setOffTech] = useState<number | ''>('')
   const [offDay, setOffDay] = useState('')
+  const [offEndDay, setOffEndDay] = useState('')
   const [offKind, setOffKind] = useState<'off' | 'half'>('off')
   const [offNote, setOffNote] = useState('')
 
@@ -64,12 +65,31 @@ export default function Team() {
   }
   const handleDelete = async () => { if (deleteId) await api.deleteTechnician(deleteId); setDeleteId(null); await load() }
 
+  // Build the list of YYYY-MM-DD days in the (inclusive) range, capped for safety.
+  const daysInRange = (start: string, end: string) => {
+    const out: string[] = []
+    const last = end && end >= start ? end : start
+    const d = new Date(start + 'T00:00:00'); const endD = new Date(last + 'T00:00:00')
+    let guard = 0
+    while (d <= endD && guard < 120) { out.push(d.toISOString().slice(0, 10)); d.setDate(d.getDate() + 1); guard++ }
+    return out
+  }
+
+  const [bookingOff, setBookingOff] = useState(false)
   const bookTimeOff = async () => {
     if (!offTech || !offDay) return
-    await api.setTimeOff(Number(offTech), offDay, offKind, offNote.trim() || undefined)
-    setOffDay(''); setOffNote(''); setOffKind('off')
-    await load()
+    setBookingOff(true)
+    try {
+      for (const day of daysInRange(offDay, offEndDay)) {
+        await api.setTimeOff(Number(offTech), day, offKind, offNote.trim() || undefined)
+      }
+      setOffDay(''); setOffEndDay(''); setOffNote(''); setOffKind('off')
+      await load()
+    } finally {
+      setBookingOff(false)
+    }
   }
+  const offDayCount = offDay ? daysInRange(offDay, offEndDay).length : 0
   const removeTimeOff = async (t: TimeOff) => { await api.clearTimeOff(t.technician_id, t.day); await load() }
 
   const techName = (id: number) => techs.find(t => t.id === id)?.name || 'Unknown'
@@ -106,16 +126,23 @@ export default function Team() {
         <div className="card">
           <div className="card-header"><span className="text-sm font-medium text-zinc-300">Book time off</span></div>
           <div className="card-body space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Technician</label>
-                <select className="select" value={offTech} onChange={e => setOffTech(e.target.value ? Number(e.target.value) : '')}>
-                  <option value="">Select…</option>
-                  {techs.filter(t => t.active).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
-              <div><label className="label">Date</label><input type="date" className="input" value={offDay} onChange={e => setOffDay(e.target.value)} /></div>
+            <div>
+              <label className="label">Technician</label>
+              <select className="select" value={offTech} onChange={e => setOffTech(e.target.value ? Number(e.target.value) : '')}>
+                <option value="">Select…</option>
+                {techs.filter(t => t.active).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label className="label">From</label><input type="date" className="input" value={offDay} onChange={e => setOffDay(e.target.value)} /></div>
+              <div>
+                <label className="label">To (optional)</label>
+                <input type="date" className="input" value={offEndDay} min={offDay || undefined} onChange={e => setOffEndDay(e.target.value)} />
+              </div>
+            </div>
+            {offDayCount > 1 && (
+              <p className="text-xs text-zinc-500">Books <span className="text-zinc-300 font-medium">{offDayCount} days</span> off ({offKind === 'half' ? 'half days' : 'full days'}).</p>
+            )}
             <div>
               <label className="label">Type</label>
               <div className="flex bg-zinc-800/60 rounded-lg p-0.5 w-fit">
@@ -128,7 +155,7 @@ export default function Team() {
               </div>
             </div>
             <div><label className="label">Note (optional)</label><input className="input" value={offNote} onChange={e => setOffNote(e.target.value)} placeholder="e.g. Doctor's appointment" /></div>
-            <button onClick={bookTimeOff} disabled={!offTech || !offDay} className="btn-primary w-full justify-center"><CalendarOff className="w-4 h-4" /> Book time off</button>
+            <button onClick={bookTimeOff} disabled={!offTech || !offDay || bookingOff} className="btn-primary w-full justify-center"><CalendarOff className="w-4 h-4" /> {bookingOff ? 'Booking…' : offDayCount > 1 ? `Book ${offDayCount} days off` : 'Book time off'}</button>
           </div>
         </div>
       </div>
@@ -182,7 +209,7 @@ export default function Team() {
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">Starts</label><input type="time" className="input" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} /></div>
             <div><label className="label">Finishes</label><input type="time" className="input" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} /></div>
           </div>

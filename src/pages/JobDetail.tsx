@@ -339,7 +339,7 @@ export default function JobDetail() {
       >
         <div className="space-y-4">
           <div><label className="label">Title</label><input className="input" value={form.title || ''} onChange={F('title')} /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="label">Status</label>
               <select className="select" value={form.status} onChange={F('status')}>
@@ -353,7 +353,7 @@ export default function JobDetail() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div><label className="label">Booked Date</label><input type="date" className="input" value={form.booked_date || ''} onChange={F('booked_date')} /></div>
             <div><label className="label">Started Date</label><input type="date" className="input" value={form.started_date || ''} onChange={F('started_date')} /></div>
             <div><label className="label">Completed Date</label><input type="date" className="input" value={form.completed_date || ''} onChange={F('completed_date')} /></div>
@@ -372,7 +372,7 @@ export default function JobDetail() {
         </>}>
         <div className="space-y-4">
           <p className="text-sm text-zinc-400">Book <span className="font-mono text-blue-400">{job.job_number}</span> into the calendar.</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">Date</label><input type="date" className="input" value={slot.day} onChange={e => setSlot(s => ({ ...s, day: e.target.value }))} /></div>
             <div><label className="label">Start time</label><input type="time" className="input" value={slot.time} onChange={e => setSlot(s => ({ ...s, time: e.target.value }))} /></div>
           </div>

@@ -43,6 +43,10 @@ export const api = {
     request('POST', 'update-licence', { key, ...updates }),
   revokeLicence: (key: string) =>
     request('POST', 'revoke-licence', { key }),
+  resendKey: (key: string) =>
+    request('POST', 'resend-key', { key }),
+  resetPassword: (key: string) =>
+    request('POST', 'reset-password', { key }),
   listSubmissions: (filters?: { type?: string; status?: string }) =>
     request('GET', 'list-submissions', undefined, {
       ...(filters?.type ? { type: filters.type } : {}),

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Plus, Search, Filter } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import NumberField from '@/components/ui/NumberField'
+import NewCustomerButton from '@/components/NewCustomerButton'
 import api from '@/lib/api'
 import { Job, Customer, Vehicle } from '@/types'
 import { formatDate, formatCurrency, JOB_STATUS_COLORS, JOB_STATUS_LABELS, cn } from '@/lib/utils'
@@ -88,8 +89,8 @@ export default function Jobs() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-zinc-800">
               {['Job #', 'Title', 'Customer', 'Vehicle', 'Status', 'Assigned', 'Value', 'Date'].map(h => (
@@ -137,9 +138,12 @@ export default function Jobs() {
       >
         <div className="space-y-4">
           <div><label className="label">Job Title *</label><input className="input" value={form.title} onChange={F('title')} placeholder="e.g. Full Service" /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="label">Customer *</label>
+              <div className="flex items-center justify-between">
+                <label className="label">Customer *</label>
+                <NewCustomerButton onCreated={c => { setCustomers(cs => [...cs, c]); setForm(f => ({ ...f, customer_id: c.id, vehicle_id: 0 })) }} />
+              </div>
               <select className="select" value={form.customer_id || ''} onChange={F('customer_id')}>
                 <option value="">Select…</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
@@ -153,7 +157,7 @@ export default function Jobs() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="label">Status</label>
               <select className="select" value={form.status} onChange={F('status')}>

@@ -5,6 +5,9 @@
 @layer base {
   :root {
     --radius: 0.5rem;
+    /* Brand accent — overridden at runtime from Settings → Branding. */
+    --accent: #1F6FEB;
+    --accent-hover: #3B82F6;
   }
 
   * {
@@ -72,7 +75,11 @@
   }
 
   .btn-primary {
-    @apply btn bg-[#1F6FEB] text-white hover:bg-blue-500 active:scale-[0.98];
+    @apply btn text-white active:scale-[0.98];
+    background: var(--accent);
+  }
+  .btn-primary:hover {
+    background: var(--accent-hover);
   }
 
   .btn-secondary {
@@ -118,7 +125,9 @@
   }
 
   .sidebar-item-active {
-    @apply sidebar-item bg-[#1F6FEB]/15 text-[#3B82F6];
+    @apply sidebar-item;
+    color: var(--accent-hover);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
   }
 
   .sidebar-item-inactive {
@@ -161,3 +170,10 @@
     @apply flex items-start gap-3 p-4 rounded-xl border;
   }
 }
+
+/* Compact UI density (Settings → Branding & Appearance) tightens spacing. */
+:root[data-density='compact'] .card-body { padding: 0.85rem 1rem; }
+:root[data-density='compact'] .card-header { padding: 0.6rem 1rem; }
+:root[data-density='compact'] .stat-card { padding: 0.85rem; }
+:root[data-density='compact'] .input { padding-top: 0.4rem; padding-bottom: 0.4rem; }
+:root[data-density='compact'] .page-header { margin-bottom: 1rem; }

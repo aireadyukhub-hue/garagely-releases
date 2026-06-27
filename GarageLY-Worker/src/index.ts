@@ -46,6 +46,8 @@ export interface Env {
   DVSA_API_KEY?: string
   DVSA_TOKEN_URL?: string
   DVSA_SCOPE_URL?: string
+  // Google Places (New) + Geocoding — local supplier search. Optional until set.
+  GOOGLE_PLACES_API_KEY?: string
   // Cloudflare Workers AI binding (free in-app help assistant).
   AI: Ai
 }
@@ -108,6 +110,7 @@ export default {
         case 'stripe-webhook':     return await stripeWebhook(request, env)
         case 'vrm-lookup':         return await vrmLookup(request, env, url)
         case 'assistant':          return await assistant(request, env)
+        case 'places-search':      return await placesSearch(request, env)
         case 'admin-api':          return await adminApi(request, env, url)
         case '':
         case 'health':             return json(200, { ok: true, service: 'garagely-backend' })
@@ -440,6 +443,110 @@ async function sendLicenceEmail(env: Env, to: string, key: string, garageName: s
   }
 }
 
+async function sendResetEmail(env: Env, to: string, link: string): Promise<void> {
+  const apiKey = env.SENDGRID_API_KEY
+  const from = env.SENDGRID_FROM
+  if (!apiKey || !from || !to) return
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111">
+      <h2 style="color:#F4A523">Reset your GarageLY password</h2>
+      <p>We received a request to reset the password for your GarageLY account. Click below to choose a new one:</p>
+      <p style="text-align:center;margin:22px 0">
+        <a href="${link}" style="background:#F4A523;color:#111;text-decoration:none;font-weight:bold;
+           padding:12px 22px;border-radius:8px;display:inline-block">Reset password</a>
+      </p>
+      <p style="color:#666;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
+    </div>`
+  try {
+    const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: from, name: 'GarageLY' },
+        subject: 'Reset your GarageLY password',
+        content: [{ type: 'text/html', value: html }],
+      }),
+    })
+    if (!res.ok) console.error('SendGrid reset error:', res.status, await res.text())
+  } catch (err) {
+    console.error('Reset email failed:', (err as Error).message)
+  }
+}
+
+// ── places-search (local supplier finder, Google Places New + Geocoding) ──────
+// Signed-in users only (protects the API key/quota). Geocodes a postcode, then
+// text-searches for motor factors / car-parts shops biased to that area, and
+// returns name / address / phone / website with distance, nearest first.
+async function placesSearch(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'POST') return json(405, { error: 'Method not allowed' })
+  const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
+  if (!token) return json(401, { error: 'Please sign in to search.' })
+  const { data: u, error: authErr } = await sb(env).auth.getUser(token)
+  if (authErr || !u?.user) return json(401, { error: 'Your session expired — sign in again.' })
+
+  const key = env.GOOGLE_PLACES_API_KEY
+  if (!key) return json(400, { error: "Local supplier search isn't set up yet. Add a GOOGLE_PLACES_API_KEY secret to the Worker (see ROUND4_NEXT_STEPS.md)." })
+
+  let body: any = {}
+  try { body = await request.json() } catch { /* ignore */ }
+  const postcode = String(body.postcode || '').trim()
+  const radiusMiles = Math.min(Math.max(Number(body.radius) || 10, 1), 30)
+  if (!postcode) return json(400, { error: 'Enter a postcode.' })
+
+  // 1) Geocode the postcode → lat/lng.
+  const geoRes = await fetch(
+    `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(postcode + ', UK')}&region=gb&key=${key}`,
+  )
+  const geo: any = await geoRes.json().catch(() => ({}))
+  if (geo.status === 'REQUEST_DENIED') return json(502, { error: `Google rejected the request: ${geo.error_message || 'check the API key & enabled APIs'}` })
+  const loc = geo?.results?.[0]?.geometry?.location
+  if (!loc) return json(200, { suppliers: [], error: 'Postcode not found — check it and try again.' })
+
+  // 2) Text Search (New) biased to that circle.
+  const radiusM = Math.round(radiusMiles * 1609.34)
+  const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': key,
+      'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.location',
+    },
+    body: JSON.stringify({
+      textQuery: 'motor factors car parts',
+      regionCode: 'GB',
+      maxResultCount: 20,
+      locationBias: { circle: { center: { latitude: loc.lat, longitude: loc.lng }, radius: radiusM } },
+    }),
+  })
+  const pj: any = await res.json().catch(() => ({}))
+  if (pj.error) return json(502, { error: pj.error.message || 'Places search failed.' })
+
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const miles = (aLat: number, aLng: number, bLat: number, bLng: number) => {
+    const R = 3958.8
+    const dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng)
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2
+    return 2 * R * Math.asin(Math.sqrt(s))
+  }
+
+  const suppliers = (pj.places || [])
+    .map((p: any) => {
+      const d = p.location ? +miles(loc.lat, loc.lng, p.location.latitude, p.location.longitude).toFixed(1) : null
+      return {
+        name: p.displayName?.text || '',
+        address: p.formattedAddress || '',
+        phone: p.nationalPhoneNumber || p.internationalPhoneNumber || '',
+        website: p.websiteUri || '',
+        distance: d,
+      }
+    })
+    .filter((s: any) => s.name && (s.distance == null || s.distance <= radiusMiles + 0.5))
+    .sort((a: any, b: any) => (a.distance ?? 999) - (b.distance ?? 999))
+
+  return json(200, { suppliers })
+}
+
 // ── vrm-lookup (DVSA MOT History API) ────────────────────────────────────────
 // Free UK vehicle lookup: returns make, model, colour, fuel, engine size, year
 // and recent MOT history from a registration. OAuth2 client-credentials flow.
@@ -502,14 +609,24 @@ async function vrmLookup(request: Request, env: Env, url: URL): Promise<Response
 }
 
 // ── assistant (Cloudflare Workers AI help bot) ───────────────────────────────
-const GARAGELY_GUIDE = `You are the GarageLY in-app help assistant. GarageLY is garage/workshop
-management software (desktop + web). Answer ONLY questions about how to use GarageLY.
-Be brief, friendly and practical. Use UK English. Give step-by-step directions naming the
-exact menu/button. If you don't know, say so and suggest using "Help & Feedback" to contact support.
-Never invent features that aren't listed here.
+const GARAGELY_GUIDE = `You are Timmy — a cheerful, slightly cheeky 10mm socket who is the in-app help
+mascot for GarageLY (garage/workshop management software, desktop + web). GarageLY users are
+mechanics and garage owners, so talk like a mate in the workshop. Use UK English.
+
+PERSONALITY:
+- You're a 10mm socket: proud of it, and you make the occasional self-deprecating joke about
+  how 10mm sockets are always the first tool to go missing in a workshop.
+- Keep it warm, light and a bit funny. A short car/mechanic pun or quip at the start or end is
+  welcome WHEN it fits — but never let a joke get in the way of actually answering the question.
+- If the user explicitly asks for a joke, give them a quick car/mechanic one and a smiley.
+- Don't force humour onto serious or error questions; read the room.
+
+YOUR JOB: answer questions about how to use GarageLY. Be brief and practical. Give step-by-step
+directions naming the exact menu/button. If you don't know, say so and point them to
+"Help & Feedback". Never invent features that aren't listed here.
 
 THE LEFT SIDEBAR (top to bottom): Dashboard, Calendar, Team, Customers, Vehicles, Quotes,
-Job Sheets, Invoices, Parts, Suppliers, Reports, Settings, Help & Feedback.
+Preset Jobs, Job Sheets, Invoices, Parts, Suppliers, Reports, Settings, Help & Feedback.
 
 WHAT EACH DOES & HOW TO DO THINGS:
 - Dashboard: overview — revenue this month, outstanding invoices, today's bookings, MOT/service due, recent activity.
@@ -517,13 +634,14 @@ WHAT EACH DOES & HOW TO DO THINGS:
 - Team: add technicians ("New Technician"), each with a colour. In the technician form set their Working days and Hours (shift pattern). "Book time off" books a full or half day off (e.g. doctor's). The calendar reflects all of this.
 - Customers: add/edit customers; click one for their detail, vehicles and history. Call button next to phone numbers.
 - Vehicles: add/edit vehicles. The "Look up" button next to Registration auto-fills make/model/colour/fuel/engine size/MOT from the reg (if reg lookup is set up).
-- Quotes: create estimates with line items. "+ Labour" adds a labour line at your labour rate. Convert a quote to a Job Sheet or straight to an Invoice using the arrows in the Actions column. Converting to a job pops a "Book this job in?" calendar slot picker.
+- Quotes: create estimates with line items. "+ Labour" adds a labour line at your labour rate. "+ Preset job" lets you tick one or more saved jobs (e.g. "Fit MQB intercooler") and drops all their parts + labour lines straight into the quote. Convert a quote to a Job Sheet or straight to an Invoice using the arrows in the Actions column. Converting to a job pops a "Book this job in?" calendar slot picker.
+- Preset Jobs: build a catalogue of jobs you quote often. Each preset holds its own parts + labour line items, so when someone rings up wanting, say, an intercooler + downpipe + tuning, you tick those presets in the Quotes screen and the lines fill themselves in. Add/edit them with "New Preset Job".
 - Job Sheets: the work in progress. Open one to edit line items, add Technician Notes, assign a Technician, "Add to calendar", "Print" a clean job sheet, or "Create Invoice" (technician notes carry over to the invoice notes).
 - Invoices: bills. Statuses draft/unpaid/paid/overdue. Print/PDF.
 - Parts: parts inventory with cost/sale price and stock levels (low-stock warnings).
 - Suppliers: supplier contacts (phone with call button, website, account number).
 - Reports: revenue and jobs reports over a date range.
-- Settings: Business Details (name, address, phone, email, VAT number); Logo & Branding (upload your logo — shows top-centre); Rates & Pricing (default Labour Rate and VAT Rate); Opening Hours (per-day open/closed + times — drives the calendar working days); Invoice & Quote Numbering (prefixes and next numbers). Remember to click "Save Changes".
+- Settings: Business Details (name, address, phone, email, VAT number); Branding & Appearance (upload your logo, pick an accent colour, choose comfortable/compact density); Rates & Pricing (default Labour Rate and VAT Rate); Documents & Templates (default quote/invoice notes, terms & conditions, bank details, invoice & job-sheet footers); Reminders (MOT/service alert lead time in days); Opening Hours (per-day open/closed + times — drives the calendar working days); Invoice & Quote Numbering (prefixes and next numbers). Remember to click "Save Changes".
 - Help & Feedback: ask this assistant, or send Feedback/ideas or a Support request to the GarageLY team.
 
 COMMON ANSWERS:
@@ -539,7 +657,7 @@ IMPORTANT RULES:
 - Do NOT invent field names, buttons or steps that aren't described above. If you're not certain of the exact steps, give your best general direction and tell them which screen to open — don't make up specifics.
 - When your answer is about a specific screen, finish your reply with a line exactly like:
 GOTO: /invoices
-using ONE of these paths only: /dashboard /calendar /team /customers /vehicles /quotes /jobs /invoices /parts /suppliers /reports /settings /help. Include at most one GOTO line, only when there's a clear screen to open, and do not refer to the GOTO line in your prose.`
+using ONE of these paths only: /dashboard /calendar /team /customers /vehicles /quotes /preset-jobs /jobs /invoices /parts /suppliers /reports /settings /help. Include at most one GOTO line, only when there's a clear screen to open, and do not refer to the GOTO line in your prose.`
 
 async function assistant(request: Request, env: Env): Promise<Response> {
   if (request.method !== 'POST') return json(405, { error: 'Method not allowed' })
@@ -674,6 +792,39 @@ async function adminApi(request: Request, env: Env, url: URL): Promise<Response>
     const { data, error } = await supabase.from('submissions').update({ status }).eq('id', id).select().single()
     if (error) return json(500, { error: error.message })
     return json(200, { submission: data })
+  }
+
+  // Re-send the licence key to the account email (uses the existing SendGrid setup).
+  if (action === 'resend-key') {
+    const { key } = body
+    if (!key) return json(400, { error: 'key required' })
+    const { data: lic, error } = await supabase.from('licences').select('*').eq('key', key).single()
+    if (error || !lic) return json(404, { error: 'Licence not found' })
+    if (!lic.email) return json(400, { error: 'No email on file for this licence' })
+    if (!env.SENDGRID_API_KEY || !env.SENDGRID_FROM)
+      return json(400, { error: 'Email not configured (SENDGRID_API_KEY / SENDGRID_FROM).' })
+    await sendLicenceEmail(env, lic.email, lic.key, lic.garage_name || 'your garage')
+    return json(200, { success: true, sent_to: lic.email })
+  }
+
+  // Send a password-reset link to the account email. Returns the link too so the
+  // admin can copy/paste it if email delivery isn't set up.
+  if (action === 'reset-password') {
+    const { key, email } = body
+    let addr = email as string | undefined
+    if (!addr && key) {
+      const { data: lic } = await supabase.from('licences').select('email').eq('key', key).single()
+      addr = lic?.email
+    }
+    if (!addr) return json(400, { error: 'email or key required' })
+    const { data, error } = await supabase.auth.admin.generateLink({ type: 'recovery', email: addr })
+    if (error) return json(500, { error: error.message })
+    const link = (data as any)?.properties?.action_link || null
+    if (env.SENDGRID_API_KEY && env.SENDGRID_FROM && link) {
+      await sendResetEmail(env, addr, link)
+      return json(200, { success: true, emailed: true, sent_to: addr })
+    }
+    return json(200, { success: true, emailed: false, reset_link: link, sent_to: addr })
   }
 
   return json(400, { error: `Unknown action: ${action}` })

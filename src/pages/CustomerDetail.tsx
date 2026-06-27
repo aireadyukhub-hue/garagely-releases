@@ -113,7 +113,7 @@ export default function CustomerDetail() {
         </div>
 
         {/* Vehicles */}
-        <div className="card col-span-2">
+        <div className="card lg:col-span-2">
           <div className="card-header flex items-center justify-between">
             <span className="text-sm font-medium text-zinc-300 flex items-center gap-2">
               <Car className="w-4 h-4" /> Vehicles ({vehicles.length})
@@ -190,17 +190,17 @@ export default function CustomerDetail() {
         }
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">First Name</label><input className="input" value={form.first_name || ''} onChange={F('first_name')} /></div>
             <div><label className="label">Last Name</label><input className="input" value={form.last_name || ''} onChange={F('last_name')} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">Email</label><input type="email" className="input" value={form.email || ''} onChange={F('email')} /></div>
             <div><label className="label">Phone</label><input className="input" value={form.phone || ''} onChange={F('phone')} /></div>
           </div>
           <div><label className="label">Mobile</label><input className="input" value={form.mobile || ''} onChange={F('mobile')} /></div>
           <div><label className="label">Address</label><input className="input" value={form.address || ''} onChange={F('address')} /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">City</label><input className="input" value={form.city || ''} onChange={F('city')} /></div>
             <div><label className="label">Postcode</label><input className="input" value={form.postcode || ''} onChange={F('postcode')} /></div>
           </div>

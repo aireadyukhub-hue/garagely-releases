@@ -4,7 +4,8 @@ import { Plus, Search, ArrowRight } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import NumberField from '@/components/ui/NumberField'
 import api from '@/lib/api'
-import { Quote, Customer, Vehicle } from '@/types'
+import { Quote, Customer, Vehicle, PresetJob } from '@/types'
+import NewCustomerButton from '@/components/NewCustomerButton'
 import { formatDate, formatCurrency, QUOTE_STATUS_COLORS, cn, calcTotals } from '@/lib/utils'
 
 const STATUS_LABELS: Record<string, string> = { draft: 'Draft', sent: 'Sent', accepted: 'Accepted', rejected: 'Rejected', converted: 'Converted' }
@@ -23,6 +24,10 @@ export default function Quotes() {
   const [technicians, setTechnicians] = useState<{ id: number; name: string; colour: string }[]>([])
   const [slotJob, setSlotJob] = useState<any>(null)
   const [slot, setSlot] = useState({ day: '', time: '09:00', technician_id: null as number | null })
+  const [presets, setPresets] = useState<PresetJob[]>([])
+  const [presetPickerOpen, setPresetPickerOpen] = useState(false)
+  const [pickedPresets, setPickedPresets] = useState<number[]>([])
+  const [defaultNotes, setDefaultNotes] = useState('')
 
   const load = () => api.getQuotes().then(d => setQuotes(d as Quote[]))
   useEffect(() => {
@@ -30,8 +35,44 @@ export default function Quotes() {
     api.getCustomers().then(d => setCustomers(d as Customer[]))
     api.getVehicles().then(d => setVehicles(d as Vehicle[]))
     api.getTechnicians().then(d => setTechnicians(d as { id: number; name: string; colour: string }[])).catch(() => {})
-    api.getSettings().then(s => { const r = (s as { labour_rate?: number })?.labour_rate; if (r) setLabourRate(r) }).catch(() => {})
+    api.getPresetJobs().then(d => setPresets(d as PresetJob[])).catch(() => {})
+    api.getSettings().then(s => {
+      const cfg = (s || {}) as { labour_rate?: number; quote_notes?: string; vat_rate?: number }
+      if (cfg.labour_rate) setLabourRate(cfg.labour_rate)
+      if (cfg.quote_notes) setDefaultNotes(cfg.quote_notes)
+    }).catch(() => {})
   }, [])
+
+  const openNewQuote = () => {
+    setForm({ ...EMPTY_Q, notes: defaultNotes })
+    setModalOpen(true)
+  }
+
+  // Drop the line items of the ticked presets into the quote.
+  const addPickedPresets = () => {
+    const chosen = presets.filter(p => pickedPresets.includes(p.id))
+    const newLines = chosen.flatMap(p =>
+      (p.items || []).map(it => ({
+        description: it.description,
+        quantity: Number(it.quantity) || 1,
+        unit_price: Number(it.unit_price) || 0,
+        total: (Number(it.quantity) || 1) * (Number(it.unit_price) || 0),
+      }))
+    )
+    if (newLines.length) {
+      setForm(f => {
+        // Drop the single blank starter row if it's still empty.
+        const existing = (f.lineItems || []).filter(l => l.description.trim() || l.unit_price)
+        return { ...f, lineItems: [...existing, ...newLines] }
+      })
+    }
+    // If the quote has no title yet, name it after the chosen presets.
+    if (chosen.length && !form.title) {
+      setForm(f => ({ ...f, title: chosen.map(c => c.name).join(' + ') }))
+    }
+    setPickedPresets([])
+    setPresetPickerOpen(false)
+  }
 
   const filtered = quotes.filter(q =>
     `${q.quote_number} ${q.first_name} ${q.last_name} ${q.title}`
@@ -87,7 +128,7 @@ export default function Quotes() {
     <div className="pt-2">
       <div className="page-header">
         <h1 className="page-title">Quotes / Estimates</h1>
-        <button onClick={() => { setForm(EMPTY_Q); setModalOpen(true) }} className="btn-primary">
+        <button onClick={openNewQuote} className="btn-primary">
           <Plus className="w-4 h-4" /> New Quote
         </button>
       </div>
@@ -97,8 +138,8 @@ export default function Quotes() {
         <input className="input pl-9" placeholder="Search quotes…" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-zinc-800">
               {['Quote #', 'Title', 'Customer', 'Vehicle', 'Status', 'Total', 'Valid Until', 'Actions'].map(h => (
@@ -163,9 +204,12 @@ export default function Quotes() {
       >
         <div className="space-y-4">
           <div><label className="label">Title</label><input className="input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Timing Belt Replacement" /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="label">Customer *</label>
+              <div className="flex items-center justify-between">
+                <label className="label">Customer *</label>
+                <NewCustomerButton onCreated={c => { setCustomers(cs => [...cs, c]); setForm(f => ({ ...f, customer_id: c.id, vehicle_id: 0 })) }} />
+              </div>
               <select className="select" value={form.customer_id || ''} onChange={e => setForm(f => ({ ...f, customer_id: Number(e.target.value), vehicle_id: 0 }))}>
                 <option value="">Select…</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
@@ -179,7 +223,7 @@ export default function Quotes() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="label">Status</label>
               <select className="select" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
@@ -194,6 +238,7 @@ export default function Quotes() {
             <div className="flex items-center justify-between mb-2">
               <label className="label mb-0">Line Items</label>
               <div className="flex items-center gap-1">
+                <button onClick={() => { setPickedPresets([]); setPresetPickerOpen(true) }} className="btn-ghost text-xs py-1 px-2 text-[#F4A523]">+ Preset job</button>
                 <button onClick={() => setForm(f => ({ ...f, lineItems: [...(f.lineItems || []), { description: 'Labour', quantity: 1, unit_price: labourRate, total: labourRate }] }))} className="btn-ghost text-xs py-1 px-2 text-blue-400">+ Labour</button>
                 <button onClick={() => setForm(f => ({ ...f, lineItems: [...(f.lineItems || []), { description: '', quantity: 1, unit_price: 0, total: 0 }] }))} className="btn-ghost text-xs py-1 px-2">+ Part / line</button>
               </div>
@@ -233,7 +278,7 @@ export default function Quotes() {
           <p className="text-sm text-zinc-400">
             Job sheet <span className="font-mono text-blue-400">{slotJob?.job_number}</span> created. Want to book it into the calendar now? (You can skip and do it later.)
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">Date</label><input type="date" className="input" value={slot.day} onChange={e => setSlot(s => ({ ...s, day: e.target.value }))} /></div>
             <div><label className="label">Start time</label><input type="time" className="input" value={slot.time} onChange={e => setSlot(s => ({ ...s, time: e.target.value }))} /></div>
           </div>
@@ -245,6 +290,44 @@ export default function Quotes() {
             </select>
           </div>
         </div>
+      </Modal>
+
+      {/* Preset-job picker — tick several saved jobs to drop their lines into the quote */}
+      <Modal open={presetPickerOpen} onClose={() => setPresetPickerOpen(false)} title="Add preset jobs" size="lg"
+        footer={<>
+          <button onClick={() => setPresetPickerOpen(false)} className="btn-secondary">Cancel</button>
+          <button onClick={addPickedPresets} disabled={pickedPresets.length === 0} className="btn-primary">
+            Add {pickedPresets.length || ''} to quote
+          </button>
+        </>}>
+        {presets.length === 0 ? (
+          <div className="text-center py-8 text-sm text-zinc-500">
+            No preset jobs yet. Create some on the <Link to="/preset-jobs" className="text-[#F4A523] hover:underline">Preset Jobs</Link> page first.
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[55vh] overflow-y-auto">
+            <p className="text-xs text-zinc-500 mb-1">Tick the jobs the customer wants — all their parts &amp; labour lines get added.</p>
+            {presets.map(p => {
+              const picked = pickedPresets.includes(p.id)
+              const tot = (p.items || []).reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0)
+              return (
+                <label key={p.id} className={cn('flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors',
+                  picked ? 'border-[#F4A523]/60 bg-[#F4A523]/10' : 'border-zinc-700 hover:border-zinc-600')}>
+                  <input type="checkbox" checked={picked} className="accent-[#F4A523] w-4 h-4 mt-0.5"
+                    onChange={e => setPickedPresets(ids => e.target.checked ? [...ids, p.id] : ids.filter(i => i !== p.id))} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-zinc-100">{p.name}</span>
+                      <span className="text-sm font-semibold text-zinc-200 shrink-0">{formatCurrency(tot)}</span>
+                    </div>
+                    {p.category && <span className="text-[11px] text-[#F4A523]">{p.category}</span>}
+                    <div className="text-xs text-zinc-500 mt-0.5">{(p.items || []).length} line{(p.items || []).length !== 1 ? 's' : ''}: {(p.items || []).map(it => it.description).filter(Boolean).slice(0, 4).join(', ')}{(p.items || []).length > 4 ? '…' : ''}</div>
+                  </div>
+                </label>
+              )
+            })}
+          </div>
+        )}
       </Modal>
     </div>
   )

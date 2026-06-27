@@ -180,4 +180,41 @@ export interface Settings {
   quote_next: number
   currency: string
   logo_data?: string | null
+  // Branding & appearance
+  accent_color?: string
+  ui_density?: 'comfortable' | 'compact'
+  // Business defaults
+  payment_terms?: string
+  bank_details?: string
+  reminder_lead_days?: number
+  // Documents & templates
+  terms?: string
+  quote_notes?: string
+  invoice_notes?: string
+  invoice_footer?: string
+  jobsheet_footer?: string
+  // Opening hours (per-weekday)
+  opening_hours?: Record<string, { open: boolean; from: string; to: string }>
+}
+
+export interface PresetJobItem {
+  id?: number
+  preset_job_id?: number
+  type: 'labour' | 'part' | 'other'
+  description: string
+  quantity: number
+  unit_price: number
+  sort_order?: number
+}
+
+export interface PresetJob {
+  id: number
+  name: string
+  category?: string
+  description?: string
+  active?: boolean
+  sort_order?: number
+  items: PresetJobItem[]
+  created_at?: string
+  updated_at?: string
 }

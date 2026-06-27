@@ -111,7 +111,7 @@ export default function Reports() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Jobs by status */}
             <div className="card p-5">
               <h3 className="text-sm font-medium text-zinc-300 mb-4">Jobs by Status</h3>
