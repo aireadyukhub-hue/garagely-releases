@@ -17,15 +17,8 @@ export default function Sidebar({ onLogout }: Props) {
     <aside className="w-56 bg-[#1F2128] border-r border-[#2A2D35] flex flex-col py-6 shrink-0">
       {/* Logo */}
       <div className="px-5 mb-8">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#F4A523] flex items-center justify-center">
-            <Key className="w-4 h-4 text-[#16181D]" />
-          </div>
-          <div>
-            <p className="text-white font-bold text-sm leading-none">GarageLY</p>
-            <p className="text-[#6B7280] text-xs mt-0.5">Admin</p>
-          </div>
-        </div>
+        <img src="/assets/garagely-logo-dark.png" alt="GarageLY" className="h-8" />
+        <p className="text-[#6B7280] text-xs mt-1.5 pl-0.5">Admin</p>
       </div>
 
       {/* Nav */}

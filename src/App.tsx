@@ -22,6 +22,7 @@ import Help from './pages/Help'
 import Auth from './pages/Auth'
 import UpdateBanner from './components/UpdateBanner'
 import DemoBanner from './components/DemoBanner'
+import TrialGate from './components/TrialGate'
 import { supabase } from './lib/supabase'
 
 type Status = 'checking' | 'unauthed' | 'authed'
@@ -82,6 +83,7 @@ export default function App() {
           <Route path="/help" element={<Help />} />
         </Routes>
       </Layout>
+      <TrialGate />
       <UpdateBanner />
     </>
   )

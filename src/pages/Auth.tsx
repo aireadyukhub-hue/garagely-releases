@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react'
-import { KeyRound, Loader2, AlertCircle, Mail, Lock } from 'lucide-react'
+import { Loader2, AlertCircle, Mail, Lock } from 'lucide-react'
 import { signIn, activateAccount } from '../lib/auth'
 
 type Mode = 'signin' | 'activate'
@@ -60,11 +60,13 @@ export default function Auth() {
     <div className="min-h-screen bg-[#16181D] flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#F4A523] mb-4">
-            <KeyRound className="w-8 h-8 text-[#16181D]" />
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">GarageLY</h1>
-          <p className="text-[#9CA3AF] mt-1 text-sm">Professional Garage Management</p>
+          <img
+            src="./assets/garagely-logo-dark.png"
+            alt="GarageLY"
+            className="h-12 mx-auto mb-3"
+            onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagely-logo-dark.png' }}
+          />
+          <p className="text-[#9CA3AF] text-sm">Professional Garage Management</p>
         </div>
 
         <div className="bg-[#1F2128] rounded-2xl p-8 border border-[#2A2D35]">

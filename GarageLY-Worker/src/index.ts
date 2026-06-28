@@ -105,6 +105,7 @@ export default {
       switch (name) {
         case 'activate-account':   return await activateAccount(request, env)
         case 'validate-licence':   return await validateLicence(request, env)
+        case 'licence-status':     return await licenceStatus(request, env)
         case 'create-checkout':    return await createCheckout(request, env)
         case 'get-key-by-session': return await getKeyBySession(request, env, url)
         case 'stripe-webhook':     return await stripeWebhook(request, env)
@@ -243,6 +244,45 @@ async function validateLicence(request: Request, env: Env): Promise<Response> {
   })
 }
 
+// ── licence-status ────────────────────────────────────────────────────────--
+// Signed-in app users: returns their licence status + trial days remaining so
+// the app can show a countdown, an end-of-trial prompt, or a lock screen.
+// Read-only (no activation_log writes, no auto-expire side effects).
+async function licenceStatus(request: Request, env: Env): Promise<Response> {
+  const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
+  if (!token) return json(401, { error: 'Not signed in' })
+  const supabase = sb(env)
+  const { data: u, error: authErr } = await supabase.auth.getUser(token)
+  if (authErr || !u?.user) return json(401, { error: 'Session expired' })
+
+  // user → garage → licence_key → licence
+  const mem = await supabase.from('garage_members').select('garage_id').eq('user_id', u.user.id).limit(1).maybeSingle()
+  const garageId = mem.data?.garage_id
+  if (!garageId) return json(200, { status: 'unknown' })
+  const g = await supabase.from('garages').select('licence_key').eq('id', garageId).maybeSingle()
+  const key = g.data?.licence_key
+  if (!key) return json(200, { status: 'unknown' })
+  const lic = await supabase.from('licences').select('status,trial_ends_at,current_period_end').eq('key', key).maybeSingle()
+  if (!lic.data) return json(200, { status: 'unknown' })
+
+  const now = Date.now()
+  const end = lic.data.trial_ends_at ? new Date(lic.data.trial_ends_at).getTime() : null
+  const dayMs = 86400_000
+  // Whole days left until trial end (negative once past).
+  const trialDaysLeft = end != null ? Math.ceil((end - now) / dayMs) : null
+  // Days since trial ended (for the post-expiry grace window).
+  const daysSinceEnd = end != null && end < now ? Math.floor((now - end) / dayMs) : 0
+
+  return json(200, {
+    status: lic.data.status,                         // trial | active | expired | cancelled
+    trialEndsAt: lic.data.trial_ends_at || null,
+    currentPeriodEnd: lic.data.current_period_end || null,
+    trialDaysLeft,
+    daysSinceEnd,
+    email: u.user.email || null,
+  })
+}
+
 // ── create-checkout ─────────────────────────────────────────────────────────
 async function createCheckout(request: Request, env: Env): Promise<Response> {
   if (request.method !== 'POST') return text(405, 'Method not allowed')
@@ -343,6 +383,23 @@ async function stripeWebhook(request: Request, env: Env): Promise<Response> {
 
       const sub = await stripe.subscriptions.retrieve(subscriptionId)
       const periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+
+      // If this email already has a licence (e.g. a trial tester converting from
+      // the in-app prompt), UPGRADE that licence to active — keeps their existing
+      // key, which is the one linked to their account/garage, so the app unlocks.
+      const prior = email
+        ? await supabase.from('licences').select('id,key').eq('email', email).order('created_at', { ascending: false }).limit(1).maybeSingle()
+        : { data: null }
+
+      if (prior.data?.id) {
+        const { error } = await supabase.from('licences').update({
+          status: 'active', stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId, current_period_end: periodEnd,
+        }).eq('id', prior.data.id)
+        if (error) { console.error('Failed to upgrade licence:', error); return text(500, 'Database error') }
+        console.log(`Licence upgraded to active: ${prior.data.key} for ${email}`)
+        break
+      }
 
       let key = generateLicenceKey()
       let attempts = 0

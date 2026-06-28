@@ -172,6 +172,36 @@ const api = {
     return (j as { answer: string }).answer
   },
 
+  // ─── Licence / trial status ───────────────────────────────────────────────
+  getLicenceStatus: async () => {
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    const res = await fetch(`${BACKEND}/licence-status`, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((j as { error?: string }).error || 'Could not check licence')
+    return j as {
+      status: 'trial' | 'active' | 'expired' | 'cancelled' | 'unknown'
+      trialEndsAt: string | null; currentPeriodEnd: string | null
+      trialDaysLeft: number | null; daysSinceEnd: number; email: string | null
+    }
+  },
+
+  // Start a Stripe checkout to subscribe; returns the URL to open.
+  startCheckout: async (garageName?: string) => {
+    const { data } = await supabase.auth.getSession()
+    const email = data.session?.user.email
+    const res = await fetch(`${BACKEND}/create-checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, garageName: garageName || 'My Garage' }),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok || !(j as { url?: string }).url) throw new Error((j as { error?: string }).error || 'Could not start checkout')
+    return (j as { url: string }).url
+  },
+
   // ─── Jobs ─────────────────────────────────────────────────────────────────
   getJobs: (filters?: any) =>
     cached(`jobs:${JSON.stringify(filters ?? {})}`, async () => {
