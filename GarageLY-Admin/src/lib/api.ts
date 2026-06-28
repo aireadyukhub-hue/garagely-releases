@@ -47,6 +47,8 @@ export const api = {
     request('POST', 'resend-key', { key }),
   resetPassword: (key: string) =>
     request('POST', 'reset-password', { key }),
+  sendInvite: (email: string, key: string, trialDays: number) =>
+    request('POST', 'send-invite', { email, key, trialDays }),
   listSubmissions: (filters?: { type?: string; status?: string }) =>
     request('GET', 'list-submissions', undefined, {
       ...(filters?.type ? { type: filters.type } : {}),

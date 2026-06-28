@@ -748,6 +748,59 @@ async function assistant(request: Request, env: Env): Promise<Response> {
   }
 }
 
+// Branded trial-invite email (HTML) — mirrors the approved design.
+function inviteEmailHtml(key: string, trialDays: number): string {
+  const site = 'https://garagely.pages.dev'
+  const app = 'https://garagely-app.pages.dev'
+  return `<div style="background:#f4f5f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" align="center" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6e8ec;">
+    <tr><td style="background:#0f1117;padding:28px 24px;text-align:center;border-bottom:3px solid #F4A523;">
+      <img src="${site}/garagely-email-logo.png" alt="GarageLY" width="280" style="display:inline-block;width:280px;max-width:72%;height:auto;" />
+      <div style="margin-top:12px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#9aa0ac;">Garage Management, Made Simple</div>
+    </td></tr>
+    <tr><td style="padding:32px 32px 8px 32px;">
+      <h1 style="margin:0 0 6px;font-size:22px;line-height:1.3;color:#16181d;">You're invited to try GarageLY free for ${trialDays} days</h1>
+      <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#5b6270;">No card needed. GarageLY is a <strong style="color:#16181d;">budget-friendly garage management system</strong> — bookings, job sheets, quotes, invoices, customers and vehicles, all in one place on desktop and in your browser.</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#8a909c;text-transform:uppercase;letter-spacing:.04em;">Your licence key</p>
+      <div style="background:#0f1117;border-radius:10px;padding:14px;text-align:center;margin:0 0 22px;border:1px solid #2a2d35;">
+        <span style="font-family:'Courier New',monospace;font-size:20px;font-weight:bold;letter-spacing:2px;color:#F4A523;">${key}</span>
+      </div>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px;"><tr>
+        <td style="padding-right:10px;"><a href="${site}" style="display:inline-block;background:#F4A523;color:#16181d;font-weight:bold;font-size:14px;text-decoration:none;padding:12px 20px;border-radius:10px;">Download for Windows</a></td>
+        <td><a href="${app}" style="display:inline-block;background:#ffffff;color:#16181d;font-weight:bold;font-size:14px;text-decoration:none;padding:11px 20px;border-radius:10px;border:1px solid #d4d7dd;">Open in browser</a></td>
+      </tr></table>
+      <p style="margin:0 0 6px;font-size:15px;font-weight:bold;color:#16181d;">Getting started</p>
+      <ol style="margin:0 0 18px;padding-left:18px;font-size:14px;line-height:1.7;color:#5b6270;">
+        <li>Download for Windows from our site, or open it in your browser.</li>
+        <li>Choose "Activate with a licence key" and create a password.</li>
+        <li>Enter the licence key above.</li>
+      </ol>
+      <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#5b6270;">Your trial runs for <strong style="color:#16181d;">${trialDays} days</strong>. When it ends you'll get a friendly prompt in the app to set up payment if you'd like to keep going — no surprises.</p>
+      <p style="margin:0;font-size:14px;line-height:1.6;color:#5b6270;">Any problems, just reply to this email.</p>
+    </td></tr>
+    <tr><td style="padding:16px 32px 26px;border-top:1px solid #eef0f3;">
+      <p style="margin:0;font-size:12px;color:#9aa0ac;">GarageLY — budget-friendly garage management.</p>
+    </td></tr>
+  </table>
+</div>`
+}
+
+async function sendInviteEmail(env: Env, to: string, key: string, trialDays: number): Promise<void> {
+  const apiKey = env.SENDGRID_API_KEY, from = env.SENDGRID_FROM
+  if (!apiKey || !from || !to) throw new Error('Email not configured')
+  const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: from, name: 'GarageLY' },
+      subject: 'Your GarageLY free trial invite',
+      content: [{ type: 'text/html', value: inviteEmailHtml(key, trialDays) }],
+    }),
+  })
+  if (!res.ok) throw new Error(`SendGrid error ${res.status}`)
+}
+
 // ── admin-api ───────────────────────────────────────────────────────────────
 async function adminApi(request: Request, env: Env, url: URL): Promise<Response> {
   const secret = request.headers.get('x-admin-secret')
@@ -849,6 +902,20 @@ async function adminApi(request: Request, env: Env, url: URL): Promise<Response>
     const { data, error } = await supabase.from('submissions').update({ status }).eq('id', id).select().single()
     if (error) return json(500, { error: error.message })
     return json(200, { submission: data })
+  }
+
+  // Send the branded trial-invite email (HTML) to a tester.
+  if (action === 'send-invite') {
+    const { email, key, trialDays } = body
+    if (!email || !key) return json(400, { error: 'email and key required' })
+    if (!env.SENDGRID_API_KEY || !env.SENDGRID_FROM)
+      return json(400, { error: 'Email sending not set up yet (needs SENDGRID_API_KEY + SENDGRID_FROM on the Worker).' })
+    try {
+      await sendInviteEmail(env, email, key, Number(trialDays) || 14)
+      return json(200, { success: true, sent_to: email })
+    } catch (e) {
+      return json(502, { error: (e as Error).message || 'Failed to send invite' })
+    }
   }
 
   // Re-send the licence key to the account email (uses the existing SendGrid setup).

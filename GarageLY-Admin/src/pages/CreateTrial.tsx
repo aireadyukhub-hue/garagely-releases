@@ -2,8 +2,8 @@ import { useState, FormEvent } from 'react'
 import { api } from '../lib/api'
 import { Loader2, CheckCircle2, AlertCircle, Copy, Mail } from 'lucide-react'
 
+const SITE_URL = 'https://garagely.pages.dev'
 const WEB_URL = 'https://garagely-app.pages.dev'
-const WIN_URL = 'https://github.com/aireadyukhub-hue/garagely-releases/releases/latest/download/GarageLY-Setup.exe'
 
 type Result = { key: string; trialEndsAt: string; email: string; garageName: string; trialDays: number }
 
@@ -13,9 +13,10 @@ function buildInvite(r: Result): string {
 
 You're invited to try GarageLY free for ${r.trialDays} days — no card needed.
 
-1. Open GarageLY:
-   • In your browser: ${WEB_URL}
-   • Or on Windows: ${WIN_URL}
+GarageLY is a budget-friendly garage management system: bookings, job sheets, quotes, invoices, customers and vehicles, on desktop and in your browser.
+
+1. Download for Windows from our site: ${SITE_URL}
+   (or open it in your browser: ${WEB_URL})
 2. Choose "Activate with a licence key" and create a password.
 3. Enter this licence key:
 
@@ -34,10 +35,28 @@ export default function CreateTrial() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<Result | null>(null)
   const [copied, setCopied] = useState<'key' | 'invite' | null>(null)
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState<string | null>(null)
+  const [sendErr, setSendErr] = useState<string | null>(null)
+
+  async function emailInvite() {
+    if (!result) return
+    setSending(true); setSendErr(null); setSent(null)
+    try {
+      const r = await api.sendInvite(result.email, result.key, result.trialDays)
+      setSent(r.sent_to || result.email)
+    } catch (err: any) {
+      setSendErr(err.message)
+    } finally {
+      setSending(false)
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    setSent(null)
+    setSendErr(null)
     setLoading(true)
     try {
       const r = await api.createTrial(email, garageName, trialDays)
@@ -88,6 +107,20 @@ export default function CreateTrial() {
                 onFocus={(e) => e.currentTarget.select()}
               />
 
+              {/* Send the branded HTML invite straight from the backend */}
+              <button
+                onClick={emailInvite}
+                disabled={sending || !!sent}
+                className="w-full bg-[#F4A523] hover:bg-[#E09415] disabled:opacity-60 text-[#16181D] font-semibold rounded-xl px-4 py-3 text-sm flex items-center justify-center gap-2 mb-2"
+              >
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : sent ? <CheckCircle2 className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
+                {sent ? `Sent to ${sent}` : `Email the branded invite to ${result.email}`}
+              </button>
+              {sendErr && (
+                <p className="text-red-400 text-xs mb-2">{sendErr}</p>
+              )}
+
+              <p className="text-[#6B7280] text-xs text-center mb-2">or send it yourself:</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => copy(buildInvite(result), 'invite')}
@@ -98,7 +131,7 @@ export default function CreateTrial() {
                 </button>
                 <a
                   href={`mailto:${encodeURIComponent(result.email)}?subject=${encodeURIComponent('Your GarageLY trial invite')}&body=${encodeURIComponent(buildInvite(result))}`}
-                  className="flex-1 bg-[#F4A523] hover:bg-[#E09415] text-[#16181D] font-semibold rounded-xl px-4 py-2.5 text-sm flex items-center justify-center gap-2"
+                  className="flex-1 bg-[#2A2D35] hover:bg-[#353841] text-white rounded-xl px-4 py-2.5 text-sm flex items-center justify-center gap-2"
                 >
                   <Mail className="w-4 h-4" /> Compose email
                 </a>
@@ -107,7 +140,7 @@ export default function CreateTrial() {
               <p className="text-[#6B7280] text-xs mt-3 text-center">
                 Trial expires {new Date(result.trialEndsAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
-              <button onClick={() => setResult(null)} className="mt-4 w-full text-[#F4A523] text-sm hover:underline">
+              <button onClick={() => { setResult(null); setSent(null); setSendErr(null) }} className="mt-4 w-full text-[#F4A523] text-sm hover:underline">
                 Invite someone else
               </button>
             </div>
