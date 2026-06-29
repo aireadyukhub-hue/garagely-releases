@@ -4,7 +4,7 @@ import api from '@/lib/api'
 import {
   LayoutDashboard, Users, Car, Wrench, FileText,
   Calendar, Package, BarChart3, Settings, ChevronLeft, ChevronRight,
-  Quote, LogOut, Truck, LifeBuoy, HardHat, ListChecks, Menu, X
+  Quote, LogOut, Truck, LifeBuoy, HardHat, ListChecks, Menu, X, ClipboardCheck, Bug
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/lib/auth'
@@ -20,8 +20,10 @@ const NAV_ITEMS = [
   { path: '/quotes', label: 'Quotes', icon: Quote },
   { path: '/preset-jobs', label: 'Preset Jobs', icon: ListChecks },
   { path: '/jobs', label: 'Job Sheets', icon: Wrench },
+  { path: '/inspections', label: 'Inspections', icon: ClipboardCheck },
   { path: '/invoices', label: 'Invoices', icon: FileText },
   { path: '/parts', label: 'Parts', icon: Package },
+  { path: '/fault-codes', label: 'Fault Codes', icon: Bug },
   { path: '/suppliers', label: 'Suppliers', icon: Truck },
   { path: '/reports', label: 'Reports', icon: BarChart3 },
   { path: '/settings', label: 'Settings', icon: Settings },
@@ -76,7 +78,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Sidebar — static column on lg+, off-canvas drawer below lg */}
       <aside
         className={cn(
-          'flex flex-col bg-zinc-950/95 lg:bg-zinc-950/80 border-r border-zinc-800/60 transition-transform lg:transition-all duration-200 shrink-0',
+          'flex flex-col bg-zinc-950/95 lg:bg-zinc-950/80 border-r border-zinc-800/60 transition-transform lg:transition-all duration-200 shrink-0 pl-safe',
           // mobile: fixed full-height drawer that slides in
           'fixed inset-y-0 left-0 z-50 w-[240px] lg:static lg:z-auto lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
@@ -87,10 +89,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {/* Logo area. GarageLY branding kept in the corner; the customer's own
             logo (if set) shows top-centre via the main top bar. pt-5 clears the
             macOS traffic-light buttons on the desktop build. */}
-        <div className={cn(
-          'titlebar-drag flex items-center h-[84px] pt-5 border-b border-zinc-800/60 shrink-0',
-          collapsed ? 'lg:justify-center lg:px-2 px-4' : 'px-4'
-        )}>
+        <div
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1.25rem)' }}
+          className={cn(
+            'titlebar-drag flex items-center min-h-[84px] border-b border-zinc-800/60 shrink-0',
+            collapsed ? 'lg:justify-center lg:px-2 px-4' : 'px-4'
+          )}
+        >
           {collapsed ? (
             <>
               <img
@@ -139,7 +144,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Sign out + collapse toggle */}
-        <div className="px-2 pb-3 space-y-0.5">
+        <div className="px-2 pb-3 space-y-0.5 pwa-safe-bottom">
           <button
             onClick={() => signOut()}
             title={collapsed ? 'Sign out' : undefined}
@@ -172,26 +177,32 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Top bar — hamburger (mobile) + customer's logo centred */}
-        <div className="titlebar-drag h-[60px] lg:h-[84px] lg:pt-5 bg-[#0f1117] border-b border-zinc-800/60 shrink-0 flex items-center px-4 lg:px-6 relative">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="text-zinc-300 hover:text-white lg:hidden titlebar-no-drag p-1 -ml-1"
-            aria-label="Open menu"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+        <div
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}
+          className="titlebar-drag px-safe min-h-[60px] lg:min-h-[84px] pb-2 bg-[#0f1117] border-b border-zinc-800/60 shrink-0 flex items-center gap-2"
+        >
+          <div className="flex-1 flex items-center">
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="text-zinc-300 hover:text-white lg:hidden titlebar-no-drag p-1 -ml-1"
+              aria-label="Open menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
           {logo && (
             <img
               src={logo}
               alt="Business logo"
-              className="max-h-10 lg:max-h-14 max-w-[200px] lg:max-w-[300px] object-contain absolute left-1/2 -translate-x-1/2"
+              className="max-h-10 lg:max-h-14 max-w-[200px] lg:max-w-[300px] object-contain shrink-0"
             />
           )}
+          <div className="flex-1" />
         </div>
 
         {/* Page content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-8">
+        <div className="flex-1 overflow-y-auto pwa-safe-bottom">
+          <div className="max-w-[1400px] mx-auto px-safe pb-8">
             {children}
           </div>
         </div>

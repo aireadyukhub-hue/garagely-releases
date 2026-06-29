@@ -23,6 +23,26 @@
   body {
     @apply bg-[#16181D] text-zinc-100 font-sans antialiased;
     -webkit-app-region: no-drag;
+    /* App-like touch feel: no blue tap flash, no rubber-band/pull-to-refresh. */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  /* Safe-area helpers for the installed PWA (notch / home indicator).
+     env() resolves to 0 on desktop and non-notch devices, so these are inert there. */
+  .pwa-safe-top { padding-top: env(safe-area-inset-top); }
+  .pwa-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  /* Horizontal insets — keeps content clear of the side notch in landscape. */
+  .pl-safe { padding-left: env(safe-area-inset-left); }
+  .px-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  @media (min-width: 640px) {
+    .px-safe {
+      padding-left: max(1.5rem, env(safe-area-inset-left));
+      padding-right: max(1.5rem, env(safe-area-inset-right));
+    }
   }
 
   /* Custom scrollbar */

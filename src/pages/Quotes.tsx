@@ -49,16 +49,28 @@ export default function Quotes() {
   }
 
   // Drop the line items of the ticked presets into the quote.
+  // Each preset's parts become lines, and its labour hours auto-price at the
+  // garage's current labour rate.
   const addPickedPresets = () => {
     const chosen = presets.filter(p => pickedPresets.includes(p.id))
-    const newLines = chosen.flatMap(p =>
-      (p.items || []).map(it => ({
+    const newLines = chosen.flatMap(p => {
+      const lines = (p.items || []).map(it => ({
         description: it.description,
         quantity: Number(it.quantity) || 1,
         unit_price: Number(it.unit_price) || 0,
         total: (Number(it.quantity) || 1) * (Number(it.unit_price) || 0),
       }))
-    )
+      const hours = Number(p.labour_hours) || 0
+      if (hours > 0) {
+        lines.unshift({
+          description: `Labour — ${p.name}`,
+          quantity: hours,
+          unit_price: labourRate,
+          total: hours * labourRate,
+        })
+      }
+      return lines
+    })
     if (newLines.length) {
       setForm(f => {
         // Drop the single blank starter row if it's still empty.
@@ -309,7 +321,7 @@ export default function Quotes() {
             <p className="text-xs text-zinc-500 mb-1">Tick the jobs the customer wants — all their parts &amp; labour lines get added.</p>
             {presets.map(p => {
               const picked = pickedPresets.includes(p.id)
-              const tot = (p.items || []).reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0)
+              const tot = (p.items || []).reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0) + (Number(p.labour_hours) || 0) * labourRate
               return (
                 <label key={p.id} className={cn('flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors',
                   picked ? 'border-[#F4A523]/60 bg-[#F4A523]/10' : 'border-zinc-700 hover:border-zinc-600')}>

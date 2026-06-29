@@ -12,6 +12,8 @@ import Invoices from './pages/Invoices'
 import InvoiceDetail from './pages/InvoiceDetail'
 import Quotes from './pages/Quotes'
 import PresetJobs from './pages/PresetJobs'
+import Inspections from './pages/Inspections'
+import FaultCodes from './pages/FaultCodes'
 import Calendar from './pages/Calendar'
 import Parts from './pages/Parts'
 import Suppliers from './pages/Suppliers'
@@ -23,6 +25,7 @@ import Auth from './pages/Auth'
 import UpdateBanner from './components/UpdateBanner'
 import DemoBanner from './components/DemoBanner'
 import TrialGate from './components/TrialGate'
+import InstallPrompt from './components/InstallPrompt'
 import { supabase } from './lib/supabase'
 
 type Status = 'checking' | 'unauthed' | 'authed'
@@ -54,7 +57,7 @@ export default function App() {
   }
 
   if (status === 'unauthed') {
-    return <Auth />
+    return <><Auth /><InstallPrompt /></>
   }
 
   return (
@@ -70,6 +73,8 @@ export default function App() {
           <Route path="/vehicles/:id" element={<VehicleDetail />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/jobs/:id" element={<JobDetail />} />
+          <Route path="/inspections" element={<Inspections />} />
+          <Route path="/fault-codes" element={<FaultCodes />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/:id" element={<InvoiceDetail />} />
           <Route path="/quotes" element={<Quotes />} />
@@ -83,6 +88,7 @@ export default function App() {
           <Route path="/help" element={<Help />} />
         </Routes>
       </Layout>
+      <InstallPrompt />
       <TrialGate />
       <UpdateBanner />
     </>

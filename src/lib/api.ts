@@ -559,6 +559,51 @@ const api = {
     return { success: true }
   },
 
+  // ─── Digital inspections ──────────────────────────────────────────────────
+  getInspections: () =>
+    cached('inspections', async () => {
+      const rows = unwrap(
+        await supabase
+          .from('inspections')
+          .select('*, vehicles(registration,make,model), customers(first_name,last_name)')
+          .order('created_at', { ascending: false }),
+      ) as Row[]
+      return rows.map((r) => flat(r, ['vehicles', 'customers']))
+    }),
+
+  getInspection: (id: number) =>
+    cached(`inspection:${id}`, async () => {
+      const raw = unwrap(
+        await supabase
+          .from('inspections')
+          .select('*, vehicles(registration,make,model,year,colour,mileage), customers(first_name,last_name,email,phone,mobile)')
+          .eq('id', id)
+          .single(),
+      )
+      const inspection = flat(raw, ['vehicles', 'customers'])
+      const settings = await settingsRow()
+      return { inspection, settings }
+    }),
+
+  createInspection: async (data: any) => {
+    const garage_id = await getGarageId()
+    return unwrap(
+      await supabase.from('inspections').insert({ ...data, garage_id }).select().single(),
+    )
+  },
+
+  updateInspection: async (id: number, data: any) => {
+    const { id: _omit, created_at: _c, updated_at: _u, registration: _r, make: _mk, model: _md, first_name: _f, last_name: _l, ...rest } = data ?? {}
+    return unwrap(
+      await supabase.from('inspections').update(rest).eq('id', id).select().single(),
+    )
+  },
+
+  deleteInspection: async (id: number) => {
+    unwrap(await supabase.from('inspections').delete().eq('id', id).select())
+    return { success: true }
+  },
+
   // ─── Feedback / support submissions ───────────────────────────────────────
   getSubmissions: () =>
     cached('submissions', async () =>

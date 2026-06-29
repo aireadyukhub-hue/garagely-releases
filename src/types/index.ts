@@ -212,9 +212,41 @@ export interface PresetJob {
   name: string
   category?: string
   description?: string
+  labour_hours?: number
   active?: boolean
   sort_order?: number
   items: PresetJobItem[]
+  created_at?: string
+  updated_at?: string
+}
+
+export type InspectionStatus = 'pass' | 'advisory' | 'fail' | 'na'
+
+export interface InspectionItem {
+  category: string
+  item: string
+  status: InspectionStatus
+  note?: string
+}
+
+export interface Inspection {
+  id: number
+  vehicle_id?: number | null
+  customer_id?: number | null
+  job_id?: number | null
+  technician_id?: number | null
+  status: 'in_progress' | 'complete'
+  result: '' | 'pass' | 'advisory' | 'fail'
+  mileage?: number | null
+  notes?: string
+  items: InspectionItem[]
+  inspected_on?: string
+  // joined
+  registration?: string
+  make?: string
+  model?: string
+  first_name?: string
+  last_name?: string
   created_at?: string
   updated_at?: string
 }

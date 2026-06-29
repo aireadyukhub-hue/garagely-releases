@@ -12,10 +12,37 @@ type EditForm = {
   name: string
   category: string
   description: string
+  labour_hours: number
   items: EditItem[]
 }
 
-const EMPTY: EditForm = { name: '', category: '', description: '', items: [{ type: 'labour', description: 'Labour', quantity: 1, unit_price: 0 }] }
+const EMPTY: EditForm = { name: '', category: '', description: '', labour_hours: 0, items: [{ type: 'part', description: '', quantity: 1, unit_price: 0 }] }
+
+// Starter labour-times library — common UK jobs at typical real-world hours.
+// One-click seeds these as preset jobs (parts left blank; labour auto-prices at
+// the garage's rate). Edit/refine after adding. Hours are sensible defaults.
+const STARTER_JOBS: { name: string; category: string; labour_hours: number }[] = [
+  { name: 'Front brake pads (per axle)', category: 'Brakes', labour_hours: 0.8 },
+  { name: 'Front brake pads & discs (per axle)', category: 'Brakes', labour_hours: 1.2 },
+  { name: 'Rear brake pads (per axle)', category: 'Brakes', labour_hours: 1.0 },
+  { name: 'Rear brake shoes', category: 'Brakes', labour_hours: 1.5 },
+  { name: 'Full service', category: 'Servicing', labour_hours: 1.5 },
+  { name: 'Interim / oil & filter service', category: 'Servicing', labour_hours: 0.8 },
+  { name: 'Cambelt / timing belt', category: 'Engine', labour_hours: 3.0 },
+  { name: 'Cambelt + water pump', category: 'Engine', labour_hours: 3.5 },
+  { name: 'Clutch replacement', category: 'Transmission', labour_hours: 5.0 },
+  { name: 'Water pump', category: 'Cooling', labour_hours: 2.0 },
+  { name: 'Thermostat', category: 'Cooling', labour_hours: 1.0 },
+  { name: 'Radiator', category: 'Cooling', labour_hours: 1.5 },
+  { name: 'Alternator', category: 'Electrical', labour_hours: 1.5 },
+  { name: 'Starter motor', category: 'Electrical', labour_hours: 1.5 },
+  { name: 'Battery replacement', category: 'Electrical', labour_hours: 0.3 },
+  { name: 'Front shock absorber (each)', category: 'Suspension', labour_hours: 1.0 },
+  { name: 'Front wishbone / control arm (each)', category: 'Suspension', labour_hours: 1.2 },
+  { name: 'Front wheel bearing (each)', category: 'Suspension', labour_hours: 1.5 },
+  { name: 'Exhaust back box', category: 'Exhaust', labour_hours: 0.6 },
+  { name: 'Diagnostic / fault investigation', category: 'Diagnostics', labour_hours: 1.0 },
+]
 
 export default function PresetJobs() {
   const [presets, setPresets] = useState<PresetJob[]>([])
@@ -38,15 +65,36 @@ export default function PresetJobs() {
 
   const presetTotal = (p: PresetJob) =>
     (p.items || []).reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0)
+    + (Number(p.labour_hours) || 0) * labourRate
   const formTotal = form.items.reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0)
+    + (Number(form.labour_hours) || 0) * labourRate
 
-  const openNew = () => { setForm({ ...EMPTY, items: [{ type: 'labour', description: 'Labour', quantity: 1, unit_price: labourRate }] }); setModalOpen(true) }
+  const [seeding, setSeeding] = useState(false)
+
+  const openNew = () => { setForm({ ...EMPTY, items: [{ type: 'part', description: '', quantity: 1, unit_price: 0 }] }); setModalOpen(true) }
   const openEdit = (p: PresetJob) => {
     setForm({
       id: p.id, name: p.name, category: p.category || '', description: p.description || '',
+      labour_hours: Number(p.labour_hours) || 0,
       items: (p.items || []).map(it => ({ type: it.type, description: it.description, quantity: it.quantity, unit_price: it.unit_price })),
     })
     setModalOpen(true)
+  }
+
+  // One-click: seed the common UK jobs (skips any already present by name).
+  const addStarterLibrary = async () => {
+    if (!confirm('Add the starter set of common UK jobs with typical labour hours? You can edit or delete any of them after.')) return
+    setSeeding(true)
+    try {
+      const existing = new Set(presets.map(p => p.name.toLowerCase()))
+      for (const j of STARTER_JOBS) {
+        if (existing.has(j.name.toLowerCase())) continue
+        await api.createPresetJob({ name: j.name, category: j.category, description: '', labour_hours: j.labour_hours, items: [] })
+      }
+      await load()
+    } finally {
+      setSeeding(false)
+    }
   }
 
   const setItem = (idx: number, patch: Partial<EditItem>) =>
@@ -57,6 +105,7 @@ export default function PresetJobs() {
     setSaving(true)
     const payload = {
       name: form.name.trim(), category: form.category.trim(), description: form.description.trim(),
+      labour_hours: Number(form.labour_hours) || 0,
       items: form.items.filter(it => it.description.trim()),
     }
     if (form.id) await api.updatePresetJob(form.id, payload)
@@ -79,7 +128,10 @@ export default function PresetJobs() {
           <h1 className="page-title">Preset Jobs</h1>
           <p className="text-sm text-zinc-500 mt-0.5">Build the jobs you quote often, then drop them straight into a quote.</p>
         </div>
-        <button onClick={openNew} className="btn-primary"><Plus className="w-4 h-4" /> New Preset Job</button>
+        <div className="flex items-center gap-2">
+          <button onClick={addStarterLibrary} disabled={seeding} className="btn-secondary">{seeding ? 'Adding…' : '+ Common UK jobs'}</button>
+          <button onClick={openNew} className="btn-primary"><Plus className="w-4 h-4" /> New Preset Job</button>
+        </div>
       </div>
 
       <div className="relative mb-5 max-w-md">
@@ -114,7 +166,13 @@ export default function PresetJobs() {
               </div>
               <div className="card-body flex-1 space-y-1.5">
                 {p.description && <p className="text-xs text-zinc-500 mb-2">{p.description}</p>}
-                {(p.items || []).length === 0 ? (
+                {Number(p.labour_hours) > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-blue-400">{p.labour_hours} hr labour</span>
+                    <span className="text-zinc-400 font-mono shrink-0">{formatCurrency((Number(p.labour_hours) || 0) * labourRate)}</span>
+                  </div>
+                )}
+                {(p.items || []).length === 0 && !(Number(p.labour_hours) > 0) ? (
                   <p className="text-xs text-zinc-600">No line items.</p>
                 ) : (p.items || []).map((it, i) => (
                   <div key={i} className="flex items-center justify-between text-xs">
@@ -145,6 +203,16 @@ export default function PresetJobs() {
             <div><label className="label">Category</label><input className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="e.g. Tuning" /></div>
           </div>
           <div><label className="label">Description</label><input className="input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional note shown on the card" /></div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="label">Labour hours</label>
+              <NumberField className="input" value={form.labour_hours} onChange={n => setForm(f => ({ ...f, labour_hours: n }))} placeholder="e.g. 1.5" />
+            </div>
+            <div className="flex items-end">
+              <p className="text-xs text-zinc-500 pb-2">Auto-prices at your labour rate (£{labourRate}/hr) when added to a quote = <span className="text-zinc-300 font-medium">{formatCurrency((Number(form.labour_hours) || 0) * labourRate)}</span></p>
+            </div>
+          </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
