@@ -298,7 +298,7 @@ async function createCheckout(request: Request, env: Env): Promise<Response> {
   if (!email) return json(400, { error: 'email required' })
 
   const stripe = stripeClient(env)
-  const site = env.SITE_URL || 'https://garagely.pages.dev'
+  const site = env.SITE_URL || 'https://getgaragely.com'
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     payment_method_types: ['card'],
@@ -750,8 +750,8 @@ async function assistant(request: Request, env: Env): Promise<Response> {
 
 // Branded trial-invite email (HTML) — mirrors the approved design.
 function inviteEmailHtml(key: string, trialDays: number): string {
-  const site = 'https://garagely.pages.dev'
-  const app = 'https://garagely-app.pages.dev'
+  const site = 'https://getgaragely.com'
+  const app = 'https://app.getgaragely.com'
   return `<div style="background:#f4f5f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;">
   <table role="presentation" align="center" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6e8ec;">
     <tr><td style="background:#0f1117;padding:28px 24px;text-align:center;border-bottom:3px solid #F4A523;">

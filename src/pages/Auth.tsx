@@ -198,12 +198,12 @@ export default function Auth() {
             className="text-[#9CA3AF] cursor-pointer hover:text-[#F4A523]"
             onClick={() =>
               window.open(
-                mode === 'signin' ? 'https://garagely.pages.dev' : 'mailto:support@garagely.co.uk',
+                mode === 'signin' ? 'https://getgaragely.com' : 'mailto:info@getgaragely.com',
                 '_blank',
               )
             }
           >
-            {mode === 'signin' ? 'Get a free trial' : 'support@garagely.co.uk'}
+            {mode === 'signin' ? 'Get a free trial' : 'info@getgaragely.com'}
           </span>
         </p>
       </div>

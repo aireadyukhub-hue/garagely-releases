@@ -15,4 +15,5 @@ binding = "AI"
 SUPABASE_URL = "https://ulrsthmkgsyfeloihens.supabase.co"
 TRIAL_DAYS = "14"
 STRIPE_PRICE_ID = "price_1TjmjIHuEMj7eABe0lLdMQfN"   # the live subscription price id
-SITE_URL = "https://garagely.pages.dev"        # marketing site URL (Stripe redirects)
+SITE_URL = "https://getgaragely.com"           # marketing site URL (Stripe redirects)
+SENDGRID_FROM = "info@getgaragely.com"        # verified sender — set up via SendGrid domain auth

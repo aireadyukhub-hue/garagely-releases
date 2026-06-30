@@ -2,8 +2,8 @@ import { useState, FormEvent } from 'react'
 import { api } from '../lib/api'
 import { Loader2, CheckCircle2, AlertCircle, Copy, Mail } from 'lucide-react'
 
-const SITE_URL = 'https://garagely.pages.dev'
-const WEB_URL = 'https://garagely-app.pages.dev'
+const SITE_URL = 'https://getgaragely.com'
+const WEB_URL = 'https://app.getgaragely.com'
 
 type Result = { key: string; trialEndsAt: string; email: string; garageName: string; trialDays: number }
 

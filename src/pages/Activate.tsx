@@ -66,12 +66,12 @@ export default function Activate({ onActivated }: Props) {
           <p className="text-[#9CA3AF] text-sm mb-6">
             Enter your licence key to unlock GarageLY. Don't have one?{' '}
             <a
-              href="https://garagely.co.uk"
+              href="https://getgaragely.com"
               className="text-[#F4A523] hover:underline cursor-pointer"
               onClick={(e) => {
                 e.preventDefault()
                 // Opens in default browser via shell.openExternal (handled by main.ts)
-                window.open('https://garagely.co.uk', '_blank')
+                window.open('https://getgaragely.com', '_blank')
               }}
             >
               Get a free trial
@@ -130,9 +130,9 @@ export default function Activate({ onActivated }: Props) {
           Need help?{' '}
           <span
             className="text-[#9CA3AF] cursor-pointer hover:text-[#F4A523]"
-            onClick={() => window.open('mailto:support@garagely.co.uk', '_blank')}
+            onClick={() => window.open('mailto:info@getgaragely.com', '_blank')}
           >
-            support@garagely.co.uk
+            info@getgaragely.com
           </span>
         </p>
       </div>
