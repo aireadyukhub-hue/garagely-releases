@@ -22,8 +22,8 @@
  *   ADMIN_SECRET                (secret) admin dashboard password
  *   TRIAL_DAYS                  (var)    default 14
  *   SITE_URL                    (var)    marketing site (for Stripe redirects)
- *   SENDGRID_API_KEY            (secret) optional — licence emails
- *   SENDGRID_FROM               (var)    optional — verified sender address
+ *   RESEND_API_KEY              (secret) optional — licence emails (Resend.com)
+ *   RESEND_FROM                 (var)    optional — verified sender address (e.g. info@getgaragely.com)
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -38,8 +38,8 @@ export interface Env {
   ADMIN_SECRET: string
   TRIAL_DAYS?: string
   SITE_URL?: string
-  SENDGRID_API_KEY?: string
-  SENDGRID_FROM?: string
+  RESEND_API_KEY?: string
+  RESEND_FROM?: string
   // DVSA MOT History API (free reg lookup) — optional until configured.
   DVSA_CLIENT_ID?: string
   DVSA_CLIENT_SECRET?: string
@@ -465,10 +465,10 @@ async function stripeWebhook(request: Request, env: Env): Promise<Response> {
 }
 
 async function sendLicenceEmail(env: Env, to: string, key: string, garageName: string): Promise<void> {
-  const apiKey = env.SENDGRID_API_KEY
-  const from = env.SENDGRID_FROM
-  if (!apiKey || !from || !to) {
-    console.log('Licence email skipped — SENDGRID_API_KEY / SENDGRID_FROM not configured')
+  const apiKey = env.RESEND_API_KEY
+  const from = env.RESEND_FROM || 'GarageLY <info@getgaragely.com>'
+  if (!apiKey || !to) {
+    console.log('Licence email skipped — RESEND_API_KEY not configured')
     return
   }
   const html = `
@@ -484,26 +484,26 @@ async function sendLicenceEmail(env: Env, to: string, key: string, garageName: s
       </p>
     </div>`
   try {
-    const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        personalizations: [{ to: [{ email: to }] }],
-        from: { email: from, name: 'GarageLY' },
+        from,
+        to: [to],
         subject: 'Your GarageLY licence key — please save this email',
-        content: [{ type: 'text/html', value: html }],
+        html,
       }),
     })
-    if (!res.ok) console.error('SendGrid error:', res.status, await res.text())
+    if (!res.ok) console.error('Resend error:', res.status, await res.text())
   } catch (err) {
     console.error('Licence email failed:', (err as Error).message)
   }
 }
 
 async function sendResetEmail(env: Env, to: string, link: string): Promise<void> {
-  const apiKey = env.SENDGRID_API_KEY
-  const from = env.SENDGRID_FROM
-  if (!apiKey || !from || !to) return
+  const apiKey = env.RESEND_API_KEY
+  const from = env.RESEND_FROM || 'GarageLY <info@getgaragely.com>'
+  if (!apiKey || !to) return
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111">
       <h2 style="color:#F4A523">Reset your GarageLY password</h2>
@@ -515,17 +515,17 @@ async function sendResetEmail(env: Env, to: string, link: string): Promise<void>
       <p style="color:#666;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
     </div>`
   try {
-    const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        personalizations: [{ to: [{ email: to }] }],
-        from: { email: from, name: 'GarageLY' },
+        from,
+        to: [to],
         subject: 'Reset your GarageLY password',
-        content: [{ type: 'text/html', value: html }],
+        html,
       }),
     })
-    if (!res.ok) console.error('SendGrid reset error:', res.status, await res.text())
+    if (!res.ok) console.error('Resend reset error:', res.status, await res.text())
   } catch (err) {
     console.error('Reset email failed:', (err as Error).message)
   }
@@ -786,19 +786,20 @@ function inviteEmailHtml(key: string, trialDays: number): string {
 }
 
 async function sendInviteEmail(env: Env, to: string, key: string, trialDays: number): Promise<void> {
-  const apiKey = env.SENDGRID_API_KEY, from = env.SENDGRID_FROM
-  if (!apiKey || !from || !to) throw new Error('Email not configured')
-  const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+  const apiKey = env.RESEND_API_KEY
+  const from = env.RESEND_FROM || 'GarageLY <info@getgaragely.com>'
+  if (!apiKey || !to) throw new Error('Email not configured')
+  const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      personalizations: [{ to: [{ email: to }] }],
-      from: { email: from, name: 'GarageLY' },
+      from,
+      to: [to],
       subject: 'Your GarageLY free trial invite',
-      content: [{ type: 'text/html', value: inviteEmailHtml(key, trialDays) }],
+      html: inviteEmailHtml(key, trialDays),
     }),
   })
-  if (!res.ok) throw new Error(`SendGrid error ${res.status}`)
+  if (!res.ok) throw new Error(`Resend error ${res.status}`)
 }
 
 // ── admin-api ───────────────────────────────────────────────────────────────
@@ -908,8 +909,8 @@ async function adminApi(request: Request, env: Env, url: URL): Promise<Response>
   if (action === 'send-invite') {
     const { email, key, trialDays } = body
     if (!email || !key) return json(400, { error: 'email and key required' })
-    if (!env.SENDGRID_API_KEY || !env.SENDGRID_FROM)
-      return json(400, { error: 'Email sending not set up yet (needs SENDGRID_API_KEY + SENDGRID_FROM on the Worker).' })
+    if (!env.RESEND_API_KEY)
+      return json(400, { error: 'Email sending not set up yet (needs RESEND_API_KEY on the Worker).' })
     try {
       await sendInviteEmail(env, email, key, Number(trialDays) || 14)
       return json(200, { success: true, sent_to: email })
@@ -925,8 +926,8 @@ async function adminApi(request: Request, env: Env, url: URL): Promise<Response>
     const { data: lic, error } = await supabase.from('licences').select('*').eq('key', key).single()
     if (error || !lic) return json(404, { error: 'Licence not found' })
     if (!lic.email) return json(400, { error: 'No email on file for this licence' })
-    if (!env.SENDGRID_API_KEY || !env.SENDGRID_FROM)
-      return json(400, { error: 'Email not configured (SENDGRID_API_KEY / SENDGRID_FROM).' })
+    if (!env.RESEND_API_KEY)
+      return json(400, { error: 'Email not configured (RESEND_API_KEY).' })
     await sendLicenceEmail(env, lic.email, lic.key, lic.garage_name || 'your garage')
     return json(200, { success: true, sent_to: lic.email })
   }
@@ -944,7 +945,7 @@ async function adminApi(request: Request, env: Env, url: URL): Promise<Response>
     const { data, error } = await supabase.auth.admin.generateLink({ type: 'recovery', email: addr })
     if (error) return json(500, { error: error.message })
     const link = (data as any)?.properties?.action_link || null
-    if (env.SENDGRID_API_KEY && env.SENDGRID_FROM && link) {
+    if (env.RESEND_API_KEY && link) {
       await sendResetEmail(env, addr, link)
       return json(200, { success: true, emailed: true, sent_to: addr })
     }

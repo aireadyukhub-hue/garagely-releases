@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 # Non-secret config lives here (committed plaintext — safe).
 # Secrets are set with `wrangler secret put NAME` (see DEPLOY.md):
 #   SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
-#   ADMIN_SECRET, SENDGRID_API_KEY (optional)
+#   ADMIN_SECRET, RESEND_API_KEY (optional — licence/reset emails)
 # Cloudflare Workers AI — powers the free in-app help assistant.
 [ai]
 binding = "AI"
@@ -16,4 +16,4 @@ SUPABASE_URL = "https://ulrsthmkgsyfeloihens.supabase.co"
 TRIAL_DAYS = "14"
 STRIPE_PRICE_ID = "price_1TjmjIHuEMj7eABe0lLdMQfN"   # the live subscription price id
 SITE_URL = "https://getgaragely.com"           # marketing site URL (Stripe redirects)
-SENDGRID_FROM = "info@getgaragely.com"        # verified sender — set up via SendGrid domain auth
+RESEND_FROM = "GarageLY <info@getgaragely.com>"  # verified sender — domain verified via Resend + Cloudflare
