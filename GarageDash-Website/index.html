@@ -636,10 +636,47 @@
 </head>
 <body>
 
+<!-- REBRAND NOTICE — only shows on the old getgaragely.com domain, not garagedash.co.uk -->
+<div id="rebrand-banner" style="display:none; background:#F4A523; color:#fff; padding:14px 20px; text-align:center; font:600 15px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  🎉 We've rebranded! GarageLY is now <strong>GarageDash</strong>. Taking you there in <span id="rebrand-countdown">6</span>s —
+  <a href="#" id="rebrand-continue" style="color:#fff; text-decoration:underline; font-weight:700;">continue now</a>
+  &nbsp;·&nbsp;
+  <a href="#" id="rebrand-stay" style="color:#fff; text-decoration:underline; opacity:0.85;">stay on this page</a>
+</div>
+<script>
+(function () {
+  var host = window.location.hostname;
+  if (host.indexOf('garagedash.co.uk') !== -1) return; // already on the new domain
+  var target = 'https://garagedash.co.uk' + window.location.pathname + window.location.search;
+  var banner = document.getElementById('rebrand-banner');
+  var countdownEl = document.getElementById('rebrand-countdown');
+  banner.style.display = 'block';
+  var seconds = 6;
+  var timer = setInterval(function () {
+    seconds--;
+    if (countdownEl) countdownEl.textContent = seconds;
+    if (seconds <= 0) {
+      clearInterval(timer);
+      window.location.href = target;
+    }
+  }, 1000);
+  document.getElementById('rebrand-continue').addEventListener('click', function (e) {
+    e.preventDefault();
+    clearInterval(timer);
+    window.location.href = target;
+  });
+  document.getElementById('rebrand-stay').addEventListener('click', function (e) {
+    e.preventDefault();
+    clearInterval(timer);
+    banner.style.display = 'none';
+  });
+})();
+</script>
+
 <!-- NAV -->
 <nav>
   <a href="#" class="logo" style="display:flex;align-items:center;">
-    <img src="/garagedash-logo-dark.png" alt="GarageDash" style="height:34px;display:block;" />
+    <img src="/garagedash-logo-dark.png" alt="GarageDash" style="height:46px;display:block;" />
   </a>
   <div class="nav-links">
     <a href="#features">Features</a>
@@ -721,6 +758,23 @@
   </div>
 </div>
 
+<!-- HOW IT WORKS: front-desk + workshop flow visuals -->
+<section class="section reveal" style="max-width:1150px;">
+  <div class="section-label">How it works</div>
+  <h2 class="section-title">One system, two teams</h2>
+  <p class="section-sub">The front desk and the workshop floor, both covered end to end.</p>
+</section>
+<section class="section reveal" style="max-width:1150px; padding-top:0;">
+  <img src="/visuals/management-flow.png" alt="GarageDash front desk workflow: quote a job, book it as a job sheet, then invoice the customer"
+       style="width:100%;height:auto;border-radius:22px;display:block;" loading="lazy" />
+</section>
+<section class="section reveal" style="max-width:1150px; padding-top:0;">
+  <img src="/visuals/technician-flow.png" alt="GarageDash workshop workflow: open the job sheet, run the inspection, add photos, mark the job complete"
+       style="width:100%;height:auto;border-radius:22px;display:block;" loading="lazy" />
+</section>
+
+<hr class="divider" />
+
 <!-- FEATURES -->
 <section class="section" id="features">
   <div class="section-label">Everything you need</div>
@@ -760,6 +814,12 @@
   </div>
 </section>
 
+<!-- SHOWCASE: JOBS IN ACTION -->
+<section class="section reveal" style="max-width:820px;padding-top:0;">
+  <img src="/visuals/jobs-in-action.png" alt="GarageDash jobs board showing job status from booked to done, with vehicle and customer details"
+       style="width:100%;height:auto;border-radius:22px;display:block;" loading="lazy" />
+</section>
+
 <hr class="divider" />
 
 <!-- PRICING -->
@@ -787,6 +847,12 @@
   </div>
 </section>
 
+<!-- SHOWCASE: INVOICES IN ACTION -->
+<section class="section reveal" style="max-width:820px;">
+  <img src="/visuals/invoices-in-action.png" alt="GarageDash invoice showing labour, parts and VAT line items with a paid status badge"
+       style="width:100%;height:auto;border-radius:22px;display:block;" loading="lazy" />
+</section>
+
 <!-- DOWNLOAD -->
 <section class="download-section" id="download">
   <div class="section-label">Download</div>
@@ -797,7 +863,7 @@
     <div class="download-info">
       <h3>GarageDash for Windows</h3>
       <p>Windows 10 &amp; 11 · One-click installer</p>
-      <a href="https://github.com/aireadyukhub-hue/garagely-releases/releases/latest/download/GarageDash-Setup.exe" class="btn-download" target="_blank">
+      <a href="https://github.com/aireadyukhub-hue/garagedash-releases/releases/latest/download/GarageDash-Setup.exe" class="btn-download" target="_blank">
         ⬇ Download for Windows
       </a>
     </div>
@@ -806,6 +872,12 @@
   <p style="margin-top: 1.5rem; font-size: 1rem; color: var(--muted);">
     💻 Don't want to install? <a href="https://garagely-app.pages.dev" target="_blank" style="color: var(--orange); font-weight: 600; text-decoration: none;">Use GarageDash in your browser →</a>
   </p>
+</section>
+
+<!-- SHOWCASE: CALENDAR IN ACTION -->
+<section class="section reveal" style="max-width:820px;">
+  <img src="/visuals/calendar-in-action.png" alt="GarageDash booking calendar showing a week of appointments across the workshop with an open slot"
+       style="width:100%;height:auto;border-radius:22px;display:block;" loading="lazy" />
 </section>
 
 <!-- FAQ — short, factual answers: good for search snippets and for AI

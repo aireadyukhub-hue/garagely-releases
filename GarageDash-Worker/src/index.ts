@@ -48,6 +48,12 @@ export interface Env {
   DVSA_SCOPE_URL?: string
   // Google Places (New) + Geocoding — local supplier search. Optional until set.
   GOOGLE_PLACES_API_KEY?: string
+  // Vehicle Data Global (VDGL) VDI Check — paid HPI/finance/write-off/stolen
+  // check, upsold to customers as the "Gold Check". Optional until configured;
+  // see goldCheck() below for the account setup this needs (PAYGO trial via
+  // https://portal.vehicledataglobal.com/signup).
+  VDGL_API_KEY?: string
+  VDGL_BASE_URL?: string
   // Cloudflare Workers AI binding (free in-app help assistant).
   AI: Ai
 }
@@ -111,6 +117,7 @@ export default {
         case 'get-key-by-session': return await getKeyBySession(request, env, url)
         case 'stripe-webhook':     return await stripeWebhook(request, env)
         case 'vrm-lookup':         return await vrmLookup(request, env, url)
+        case 'gold-check':         return await goldCheck(request, env, url)
         case 'assistant':          return await assistant(request, env)
         case 'places-search':      return await placesSearch(request, env)
         case 'admin-api':          return await adminApi(request, env, url)
@@ -666,10 +673,71 @@ async function vrmLookup(request: Request, env: Env, url: URL): Promise<Response
       mileage: latest?.odometerValue ? Number(String(latest.odometerValue).replace(/\D/g, '')) || null : null,
       mot_history: tests.slice(0, 5).map((m: any) => ({
         date: m.completedDate, result: m.testResult, mileage: m.odometerValue, expiry: m.expiryDate,
+        // Reasons for rejection / advisories — dangerous & major defects surfaced
+        // first so a quick glance shows the stuff that actually matters.
+        defects: Array.isArray(m.rfrAndComments)
+          ? m.rfrAndComments.map((r: any) => ({ text: r.text, type: r.type, dangerous: !!r.dangerous }))
+          : [],
       })),
     })
   } catch {
     return json(502, { error: 'Lookup failed. Try again shortly.' })
+  }
+}
+
+// ── gold-check (VDGL VDI Check — paid HPI/finance/write-off/stolen check) ────
+// Upsold to the garage's customer as the "Gold Check" (~£5, costs ~£3 via
+// VDGL's VDI Check product). Needs a VDGL account: sign up at
+// https://portal.vehicledataglobal.com/signup (PAYGO, no contract), then set
+// VDGL_API_KEY and VDGL_BASE_URL as Worker secrets/vars.
+//
+// Field mapping below is grounded in VDGL's *published* per-data-source docs
+// (vehicledataglobal.com/DataSources/{FinanceDetails,MiaftrDetails,PncCheck,
+// ScrappedCheck}), which each show a named JSON block — e.g. `MiaftrDetails`,
+// `FinanceDetails`. Their pricing page notes "VDI Check® is comprised of
+// multiple data sources", so the bundled VDI Check response is expected to
+// combine these same named blocks into one object. Still verify against a
+// real sample response once logged into the portal — the exact endpoint path
+// and auth header below (`/vdicheck?vrm=`, Bearer token) are our best guess
+// since the full API reference is only visible after signup.
+async function goldCheck(request: Request, env: Env, url: URL): Promise<Response> {
+  const reg = (url.searchParams.get('reg') || '').replace(/\s+/g, '').toUpperCase()
+  if (!reg) return json(400, { error: 'reg required' })
+  if (!env.VDGL_API_KEY || !env.VDGL_BASE_URL) {
+    return json(503, { error: 'Gold Check is not set up yet.' })
+  }
+  try {
+    const res = await fetch(
+      `${env.VDGL_BASE_URL.replace(/\/+$/, '')}/vdicheck?vrm=${encodeURIComponent(reg)}`,
+      { headers: { Authorization: `Bearer ${env.VDGL_API_KEY}`, Accept: 'application/json' } },
+    )
+    if (res.status === 404) return json(404, { error: 'No vehicle found for that registration.' })
+    if (!res.ok) return json(502, { error: 'Gold Check service error. Try again shortly.' })
+    const d: any = await res.json()
+    const financeRecords = d.FinanceDetails?.FinanceRecordList || []
+    const writeOffRecords = d.MiaftrDetails?.WriteOffRecordList || []
+    const latestWriteOff = writeOffRecords[0] || null
+    const latestFinance = financeRecords[0] || null
+    return json(200, {
+      registration: d.Vrm || d.registration || reg,
+      finance_outstanding: financeRecords.length > 0,
+      finance_company: latestFinance?.FinanceCompany || null,
+      finance_agreement_type: latestFinance?.AgreementType || null,
+      written_off: writeOffRecords.length > 0,
+      write_off_category: latestWriteOff?.Category || null,
+      write_off_insurer: latestWriteOff?.InsurerName || null,
+      stolen: !!(d.PncCheck?.IsStolen ?? d.IsStolen),
+      scrapped: !!(d.ScrappedCheck?.IsScrapped ?? d.IsScrapped),
+      imported: !!d.imported,
+      exported: !!d.exported,
+      plate_changed: !!(d.plateChangeRecord ?? d.plateChanged),
+      previous_keepers: d.previousKeepers ?? d.keeperChanges ?? null,
+      valuation: d.valuation ?? null,
+      mileage_anomaly: !!(d.mileageDiscrepancy ?? d.mileageAnomaly),
+      raw: d,
+    })
+  } catch {
+    return json(502, { error: 'Gold Check failed. Try again shortly.' })
   }
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { Plus, Search, AlertTriangle, Clock } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import NumberField from '@/components/ui/NumberField'
@@ -24,6 +24,8 @@ export default function Vehicles() {
   const [lookupMsg, setLookupMsg] = useState<string | null>(null)
   const [searchParams] = useSearchParams()
   const preselectedCustomer = searchParams.get('customerId')
+  const location = useLocation()
+  const navigate = useNavigate()
 
   const doLookup = async () => {
     const reg = String(form.registration || '').trim()
@@ -61,6 +63,20 @@ export default function Vehicles() {
       setModalOpen(true)
     }
   }, [preselectedCustomer])
+
+  // Arriving from the dashboard's Reg Check "Add car" button — prefill the
+  // add-vehicle form from the lookup result already fetched there (no need
+  // to look it up again) and open the modal so the user just picks a customer.
+  useEffect(() => {
+    const prefill = (location.state as { prefillVehicle?: Partial<Vehicle> } | null)?.prefillVehicle
+    if (prefill) {
+      setForm(f => ({ ...f, ...prefill }))
+      setModalOpen(true)
+      // Clear the router state so refreshing/navigating back doesn't reopen it.
+      navigate(location.pathname + location.search, { replace: true, state: null })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
 
   const filtered = vehicles.filter(v =>
     `${v.registration} ${v.make} ${v.model} ${v.first_name} ${v.last_name}`

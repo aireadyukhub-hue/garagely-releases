@@ -155,6 +155,21 @@
   </style>
 </head>
 <body>
+  <div id="rebrand-banner" style="display:none; background:#F4A523; color:#fff; padding:14px 20px; text-align:center; font:600 15px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    🎉 We've rebranded! GarageLY is now <strong>GarageDash</strong>. Once you've saved your key, <a href="#" id="rebrand-continue" style="color:#fff; text-decoration:underline; font-weight:700;">continue to garagedash.co.uk</a>.
+  </div>
+  <script>
+  (function () {
+    var host = window.location.hostname;
+    if (host.indexOf('garagedash.co.uk') !== -1) return; // already on the new domain
+    var target = 'https://garagedash.co.uk' + window.location.pathname + window.location.search;
+    document.getElementById('rebrand-banner').style.display = 'block';
+    document.getElementById('rebrand-continue').addEventListener('click', function (e) {
+      e.preventDefault();
+      window.location.href = target;
+    });
+  })();
+  </script>
   <div class="card hero-in">
     <div class="tick">✓</div>
     <h1>You're all set!</h1>
@@ -186,7 +201,7 @@
       </div>
     </div>
 
-    <a href="https://github.com/aireadyukhub-hue/garagely-releases/releases/latest" class="btn-download" target="_blank">
+    <a href="https://github.com/aireadyukhub-hue/garagedash-releases/releases/latest" class="btn-download" target="_blank">
       ⬇ Download GarageDash
     </a>
   </div>

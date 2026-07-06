@@ -4,6 +4,7 @@ import { TrendingUp, Clock, AlertTriangle, FileText, Wrench, Calendar } from 'lu
 import { formatCurrency, formatDate, JOB_STATUS_COLORS, JOB_STATUS_LABELS, isOverdue } from '@/lib/utils'
 import api from '@/lib/api'
 import { cn } from '@/lib/utils'
+import RegCheckCard from '@/components/RegCheckCard'
 
 interface DashboardData {
   todayBookings: Array<{
@@ -60,6 +61,8 @@ export default function Dashboard() {
           <p className="text-sm text-zinc-500 mt-0.5">{dateStr}</p>
         </div>
       </div>
+
+      <RegCheckCard />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

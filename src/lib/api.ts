@@ -155,6 +155,27 @@ const api = {
     return j as {
       registration: string; make: string; model: string; colour: string
       fuel_type: string; engine_size: string; year: number | null; mot_due: string; mileage: number | null
+      mot_history: Array<{
+        date: string; result: string; mileage: number | null; expiry: string
+        defects: Array<{ text: string; type: string; dangerous: boolean }>
+      }>
+    }
+  },
+
+  // Paid "Gold Check" — full HPI/finance/write-off/stolen check via VDGL's
+  // VDI Check product. Costs ~£3 wholesale; garage upsells to the customer
+  // at ~£5. Throws with a friendly message if VDGL isn't configured yet.
+  goldCheck: async (reg: string) => {
+    const res = await fetch(`${BACKEND}/gold-check?reg=${encodeURIComponent(reg)}`)
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((j as { error?: string }).error || 'Gold Check failed')
+    return j as {
+      registration: string; finance_outstanding: boolean; finance_company: string | null
+      finance_agreement_type: string | null; written_off: boolean
+      write_off_category: string | null; write_off_insurer: string | null
+      stolen: boolean; scrapped: boolean
+      imported: boolean; exported: boolean; plate_changed: boolean
+      previous_keepers: number | null; valuation: unknown; mileage_anomaly: boolean
     }
   },
 
