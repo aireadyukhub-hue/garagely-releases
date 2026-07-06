@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search, Pencil, Trash2, Printer, ClipboardCheck } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Printer, ClipboardCheck, Camera, X as XIcon } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import NumberField from '@/components/ui/NumberField'
 import NewCustomerButton from '@/components/NewCustomerButton'
@@ -25,7 +25,31 @@ const STATUS_META: Record<InspectionStatus, { label: string; dot: string; badge:
 }
 
 const buildItems = (): InspectionItem[] =>
-  TEMPLATE.flatMap(g => g.items.map(item => ({ category: g.category, item, status: 'pass' as InspectionStatus, note: '' })))
+  TEMPLATE.flatMap(g => g.items.map(item => ({ category: g.category, item, status: 'pass' as InspectionStatus, note: '', photo: undefined })))
+
+// Downscale a captured/chosen photo before storing it (keeps the inspection
+// row small — these live inline in the items JSON, not separate file storage).
+const readPhoto = (file: File, maxW = 640): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error)
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('Could not read image'))
+      img.onload = () => {
+        const scale = Math.min(1, maxW / img.width)
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', 0.72))
+      }
+      img.src = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  })
 
 const overallResult = (items: InspectionItem[]): 'pass' | 'advisory' | 'fail' => {
   if (items.some(i => i.status === 'fail')) return 'fail'
@@ -82,6 +106,19 @@ export default function Inspections() {
     setForm(f => ({ ...f, items: f.items.map((it, n) => n === idx ? { ...it, status } : it) }))
   const setItemNote = (idx: number, note: string) =>
     setForm(f => ({ ...f, items: f.items.map((it, n) => n === idx ? { ...it, note } : it) }))
+  const [photoBusy, setPhotoBusy] = useState<number | null>(null)
+  const setItemPhoto = async (idx: number, file: File | null) => {
+    if (!file) return
+    setPhotoBusy(idx)
+    try {
+      const photo = await readPhoto(file)
+      setForm(f => ({ ...f, items: f.items.map((it, n) => n === idx ? { ...it, photo } : it) }))
+    } finally {
+      setPhotoBusy(null)
+    }
+  }
+  const removeItemPhoto = (idx: number) =>
+    setForm(f => ({ ...f, items: f.items.map((it, n) => n === idx ? { ...it, photo: undefined } : it) }))
 
   const handleSave = async () => {
     if (!form.vehicle_id) { alert('Pick a vehicle for the inspection.'); return }
@@ -123,13 +160,14 @@ export default function Inspections() {
           <td style="padding:6px 8px;border-bottom:1px solid #eee">${esc(i.item)}</td>
           <td style="padding:6px 8px;border-bottom:1px solid #eee;color:${m.report};font-weight:600">${m.label}</td>
           <td style="padding:6px 8px;border-bottom:1px solid #eee;color:#555">${esc(i.note || '')}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee">${i.photo ? `<img src="${i.photo}" style="height:48px;width:auto;border-radius:4px;object-fit:cover"/>` : ''}</td>
         </tr>`
       }).join('')
       return `<h3 style="margin:18px 0 4px;font-size:14px;color:#111">${esc(cat)}</h3>
         <table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>${lines}</tbody></table>`
     }).join('')
 
-    const logo = s?.logo_data ? `<img src="${s.logo_data}" style="max-height:54px;max-width:220px;object-fit:contain"/>` : `<div style="font-size:22px;font-weight:800;color:#111">${esc(s?.business_name || 'GarageLY')}</div>`
+    const logo = s?.logo_data ? `<img src="${s.logo_data}" style="max-height:54px;max-width:220px;object-fit:contain"/>` : `<div style="font-size:22px;font-weight:800;color:#111">${esc(s?.business_name || 'GarageDash')}</div>`
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Vehicle Health Check</title></head>
       <body style="font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px;max-width:760px">
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #F4A523;padding-bottom:12px">
@@ -258,6 +296,16 @@ export default function Inspections() {
                       <div key={itemName} className="px-3 py-2">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-zinc-200 flex-1 min-w-0">{itemName}</span>
+                          <label className={cn('btn-ghost p-1.5 shrink-0 cursor-pointer', photoBusy === idx && 'opacity-50 pointer-events-none')} title="Add photo">
+                            <Camera className="w-3.5 h-3.5" />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              className="hidden"
+                              onChange={(e) => { setItemPhoto(idx, e.target.files?.[0] || null); e.target.value = '' }}
+                            />
+                          </label>
                           <div className="flex gap-1 shrink-0">
                             {(['pass', 'advisory', 'fail', 'na'] as InspectionStatus[]).map(st => {
                               const m = STATUS_META[st]
@@ -275,6 +323,15 @@ export default function Inspections() {
                         {it.status !== 'pass' && it.status !== 'na' && (
                           <input className="input text-xs py-1 mt-1.5" placeholder="Note (what's wrong / recommendation)"
                             value={it.note || ''} onChange={e => setItemNote(idx, e.target.value)} />
+                        )}
+                        {it.photo && (
+                          <div className="relative inline-block mt-1.5">
+                            <img src={it.photo} alt={itemName} className="h-16 w-auto rounded-md border border-zinc-700 object-cover" />
+                            <button type="button" onClick={() => removeItemPhoto(idx)}
+                              className="absolute -top-1.5 -right-1.5 bg-zinc-900 border border-zinc-700 rounded-full p-0.5 text-zinc-400 hover:text-red-400">
+                              <XIcon className="w-3 h-3" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     )

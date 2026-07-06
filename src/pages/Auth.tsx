@@ -7,8 +7,9 @@ type Mode = 'signin' | 'activate'
 function formatKey(raw: string) {
   const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '')
   const parts: string[] = []
-  if (clean.startsWith('GRLY')) {
-    parts.push('GRLY')
+  const prefix = ['GDSH', 'GRLY'].find((p) => clean.startsWith(p))
+  if (prefix) {
+    parts.push(prefix)
     const rest = clean.slice(4)
     for (let i = 0; i < 3; i++) {
       if (rest.slice(i * 4, i * 4 + 4)) parts.push(rest.slice(i * 4, i * 4 + 4))
@@ -61,10 +62,10 @@ export default function Auth() {
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
           <img
-            src="./assets/garagely-logo-dark.png"
-            alt="GarageLY"
+            src="./assets/garagedash-logo-dark.png"
+            alt="GarageDash"
             className="h-12 mx-auto mb-3"
-            onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagely-logo-dark.png' }}
+            onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagedash-logo-dark.png' }}
           />
           <p className="text-[#9CA3AF] text-sm">Professional Garage Management</p>
         </div>
@@ -109,7 +110,7 @@ export default function Auth() {
                   type="text"
                   value={key}
                   onChange={(e) => setKey(formatKey(e.target.value))}
-                  placeholder="GRLY-XXXX-XXXX-XXXX"
+                  placeholder="GDSH-XXXX-XXXX-XXXX"
                   maxLength={19}
                   spellCheck={false}
                   className={inputClass + ' font-mono'}
@@ -198,12 +199,12 @@ export default function Auth() {
             className="text-[#9CA3AF] cursor-pointer hover:text-[#F4A523]"
             onClick={() =>
               window.open(
-                mode === 'signin' ? 'https://getgaragely.com' : 'mailto:info@getgaragely.com',
+                mode === 'signin' ? 'https://garagedash.co.uk' : 'mailto:info@garagedash.co.uk',
                 '_blank',
               )
             }
           >
-            {mode === 'signin' ? 'Get a free trial' : 'info@getgaragely.com'}
+            {mode === 'signin' ? 'Get a free trial' : 'info@garagedash.co.uk'}
           </span>
         </p>
       </div>

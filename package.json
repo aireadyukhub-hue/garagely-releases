@@ -1,5 +1,5 @@
 {
-  "name": "garagely",
+  "name": "garagedash",
   "version": "1.2.3",
   "description": "Garage Management System",
   "main": "dist-electron/main.js",
@@ -14,7 +14,7 @@
     "preview": "vite preview"
   },
   "keywords": [],
-  "author": "Garagely",
+  "author": "GarageDash",
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
@@ -49,7 +49,7 @@
   },
   "build": {
     "appId": "com.garagely.app",
-    "productName": "Garagely",
+    "productName": "GarageDash",
     "directories": {
       "output": "release"
     },
@@ -73,7 +73,7 @@
     },
     "win": {
       "icon": "build/icon.ico",
-      "artifactName": "GarageLY-Setup.${ext}",
+      "artifactName": "GarageDash-Setup.${ext}",
       "target": [
         {
           "target": "nsis",
@@ -87,13 +87,22 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
-    "publish": {
-      "provider": "github",
-      "owner": "aireadyukhub-hue",
-      "repo": "garagely-releases",
-      "private": false,
-      "releaseType": "release"
-    }
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "aireadyukhub-hue",
+        "repo": "garagedash-releases",
+        "private": false,
+        "releaseType": "release"
+      },
+      {
+        "provider": "github",
+        "owner": "aireadyukhub-hue",
+        "repo": "garagely-releases",
+        "private": false,
+        "releaseType": "release"
+      }
+    ]
   },
   "allowScripts": {
     "fsevents@2.3.3": true,

@@ -1,4 +1,7 @@
-# GarageLY — Option A Cloud Sync: Migration Plan
+# GarageDash — Option A Cloud Sync: Migration Plan
+
+> STATUS: historical planning doc — this migration shipped 2026-06-20 (v1.0.1). Netlify references
+> below are superseded by the June 2026 Cloudflare migration. Kept for reference only.
 
 **Goal:** Move the desktop app's data layer from local sql.js to Supabase, and build an identical web app on the same Supabase database. A job saved on the desktop at work appears in the web app at home. Login is email + password via Supabase Auth; one account works on both desktop and web, with the licence linked to it.
 
@@ -61,7 +64,7 @@ This guarantees a garage can never read or write another garage's rows, even tho
 
 **Atomic numbering** — `job_number`, `invoice_number`, `quote_number` are currently generated in JS by reading the last row / a counter. Across two devices that can collide. Move each into an RPC (`create_job`, `create_invoice`, `create_quote`) that allocates the next number atomically inside a transaction.
 
-All of this ships as a single, idempotent SQL migration file checked into `GarageLY-Backend/` and applied to Supabase via the SQL editor (or `psql` with the service_role connection).
+All of this ships as a single, idempotent SQL migration file checked into `GarageDash-Backend/` and applied to Supabase via the SQL editor (or `psql` with the service_role connection).
 
 ---
 
@@ -100,9 +103,9 @@ This satisfies "still works offline" for viewing without the cost and risk of a 
 
 ---
 
-## 5. Web app (`GarageLY-Web/`)
+## 5. Web app (`GarageDash-Web/`)
 
-Scaffold a Vite + React + TS app that **reuses** the existing pages/components rather than duplicating them. Practical approach: a Vite alias so `GarageLY-Web` imports the shared `src/pages`, `src/components`, `src/lib` directly (single source of truth), with only the web entry point (`main.tsx`, router, no Electron) living in `GarageLY-Web`. Identical UI and dark theme fall out automatically.
+Scaffold a Vite + React + TS app that **reuses** the existing pages/components rather than duplicating them. Practical approach: a Vite alias so `GarageDash-Web` imports the shared `src/pages`, `src/components`, `src/lib` directly (single source of truth), with only the web entry point (`main.tsx`, router, no Electron) living in `GarageDash-Web`. Identical UI and dark theme fall out automatically.
 
 Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Deploy to Netlify as `garagely-app.netlify.app` (or your preferred subdomain). Netlify CLI is already linked.
 
@@ -113,9 +116,9 @@ Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Deploy to Netlify as `garage
 1. **Supabase foundation** — final schema + `garage_id` + RLS + views/RPCs + atomic numbering, as one migration file; apply to Supabase; seed one demo garage to test against.
 2. **Shared data layer** — add `supabase-js`; rewrite `src/lib/api.ts` as a Supabase implementation of `GaragelyAPI`; reproduce all ~40 endpoints; add the offline read-cache wrapper.
 3. **Auth in desktop** — `activate-account` function; extend `Activate.tsx` (email/password); login screen; rework `App.tsx` gating; confirm licence flow intact.
-4. **Web app** — scaffold `GarageLY-Web/`, wire shared UI + Supabase, build, deploy to Netlify.
+4. **Web app** — scaffold `GarageDash-Web/`, wire shared UI + Supabase, build, deploy to Netlify.
 5. **Verify** — cross-device test (save on desktop → appears on web); RLS isolation test (two garages can't see each other's data); offline read test; licence still activates and gates correctly. Use a subagent for an independent verification pass.
-6. **Notion** — update "GarageLY — Project Master Doc" with the web app URL, anon key, and new migration/RPC files.
+6. **Notion** — update "GarageDash — Project Master Doc" with the web app URL, anon key, and new migration/RPC files.
 
 ---
 

@@ -17,7 +17,7 @@ export async function cached<T>(key: string, fn: () => Promise<T>): Promise<T> {
     try {
       const c = localStorage.getItem(PREFIX + key)
       if (c != null) {
-        console.warn('[GarageLY offline] serving cached:', key)
+        console.warn('[GarageDash offline] serving cached:', key)
         return JSON.parse(c) as T
       }
     } catch {

@@ -1,4 +1,4 @@
-# GarageLY — Round 6: labour times, digital inspections, fault-code lookup
+# GarageDash — Round 6: labour times, digital inspections, fault-code lookup
 
 Built autonomously while you were at work. All code-complete and type-checked (the only tsc
 errors are the same pre-existing ones in Activate/Invoices/Jobs/Reports — none of this round's).
@@ -32,12 +32,12 @@ errors are the same pre-existing ones in Activate/Invoices/Jobs/Reports — none
 ## ⚠️ To make it live
 
 ### 1. Apply the database migration (for labour times + inspections)
-Run **`GarageLY-Backend/migrations/0009_labour_hours_inspections.sql`** in the Supabase SQL editor.
+Run **`GarageDash-Backend/migrations/0009_labour_hours_inspections.sql`** in the Supabase SQL editor.
 (Adds `preset_jobs.labour_hours` and the `inspections` table + RLS.) The fault-code page needs nothing here.
 
 ### 2. Deploy the web app
 ```
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Web" && npm run build && wrangler pages deploy dist --project-name garagely-app
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Web" && npm run build && wrangler pages deploy dist --project-name garagedash-app
 ```
 
 ### 3. (When ready) cut a desktop release so it reaches the Windows/desktop app

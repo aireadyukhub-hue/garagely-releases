@@ -1,11 +1,11 @@
-# GarageLY — Round 5: trial invites + in-app payment prompt
+# GarageDash — Round 5: trial invites + in-app payment prompt
 
 Code-complete and type-checked. No database migration this round.
 
 ## What changed
 
 1. **Admin → "Invite a tester"** (was "Create Free Trial"): set the trial length, hit
-   **"Invite to try GarageLY for X days"**, and you get the licence key **plus a ready-to-send
+   **"Invite to try GarageDash for X days"**, and you get the licence key **plus a ready-to-send
    invite message** (download links + key + steps) with a **Copy invite** button and a
    **Compose email** button that opens your mail app addressed to them. No card needed — same
    manual trial as before, just easier to send.
@@ -21,13 +21,13 @@ Code-complete and type-checked. No database migration this round.
 ## Deploy (Cloudflare — run each on its own line)
 
 ```
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Worker" && wrangler deploy
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Worker" && wrangler deploy
 ```
 ```
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Web" && npm run build && wrangler pages deploy dist --project-name garagely-app
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Web" && npm run build && wrangler pages deploy dist --project-name garagedash-app
 ```
 ```
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Admin" && npm run build && wrangler pages deploy dist --project-name garagely-admin
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Admin" && npm run build && wrangler pages deploy dist --project-name garagedash-admin
 ```
 
 If Liam (or any tester) will use the **Windows desktop app**, also cut a release so the trial

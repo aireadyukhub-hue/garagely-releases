@@ -115,7 +115,7 @@ iconutil -c icns tmp.iconset -o build/icon.icns
 ## File Structure
 
 ```
-GarageLY/
+GarageDash/
 ├── electron/           # Electron main process (TypeScript → CommonJS)
 │   ├── main.ts         # App entry, window creation
 │   ├── preload.ts      # contextBridge IPC API

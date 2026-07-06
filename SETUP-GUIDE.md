@@ -1,4 +1,6 @@
-# GarageLY — Commercial Setup Guide
+# GarageDash — Commercial Setup Guide
+
+> NOTE (2026-07-06): This guide predates the June 2026 Cloudflare migration (superseded by `GarageDash-Worker`/Pages, see `ROUND3_NEXT_STEPS.md` onward) and the GarageLY→GarageDash rebrand. Kept for historical reference to the original Netlify-based bring-up steps; names below updated to current branding, but the Netlify-specific steps are no longer how the live infra is deployed.
 
 Everything you need to go from "code on your Mac" to "paying subscribers auto-updating."
 
@@ -7,17 +9,17 @@ Everything you need to go from "code on your Mac" to "paying subscribers auto-up
 ## Overview
 
 ```
-GarageLY app (Electron)
+GarageDash app (Electron)
     ↕ licence validation
-GarageLY-Backend (Netlify Functions)
+GarageDash-Backend (originally Netlify Functions, now Cloudflare Worker)
     ↕ reads/writes
 Supabase (Postgres database)
     ↕ payment events
 Stripe (subscriptions)
 
-GarageLY-Admin (Netlify site)
+GarageDash-Admin (originally Netlify site, now Cloudflare Pages)
     ↕ admin API calls
-GarageLY-Backend
+GarageDash-Backend
 ```
 
 ---

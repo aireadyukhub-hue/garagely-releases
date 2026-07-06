@@ -1,4 +1,7 @@
-# GarageLY Cloud Sync — Remaining Steps (need you)
+# GarageDash Cloud Sync — Remaining Steps (need you)
+
+> STATUS: historical — these steps were completed 2026-06-20 (cloud sync shipped in v1.0.1). Kept
+> for reference only. See `garagely-cloud-sync` memory for current state.
 
 Everything is built and the database is live. Three things remain that require
 your machine (Terminal) or a value I can't read for security reasons.
@@ -10,15 +13,15 @@ blocked me from copying it, so paste it yourself:
 
 1. Supabase → Project **garagely** → Settings → **API Keys** → **Legacy** tab → copy the **`anon` `public`** key.
 2. Paste it into **both** files, replacing `PASTE_ANON_PUBLIC_KEY_HERE`:
-   - `/GarageLY/.env`
-   - `/GarageLY/GarageLY-Web/.env`
+   - `/GarageDash/.env`
+   - `/GarageDash/GarageDash-Web/.env`
 
 (The anon key is safe to expose — Row Level Security protects all data.)
 
 ## 2. Deploy the backend (adds the new account-activation function)
 
 ```bash
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Backend"
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Backend"
 npm install            # first time only — pulls @netlify/functions etc.
 netlify deploy --prod  # NOTE: do NOT use --no-build here — it skips bundling the new function
 ```
@@ -35,7 +38,7 @@ existing `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 ## 3. Deploy the web app
 
 ```bash
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Web"
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Web"
 npm install
 npm run build
 netlify deploy --prod --dir=dist
@@ -53,7 +56,7 @@ connect:
 
 ## 4. Try it (the whole point)
 
-1. Run the desktop app: `cd /GarageLY && npm run dev`.
+1. Run the desktop app: `cd /GarageDash && npm run dev`.
 2. On the **Activate licence** tab, enter a valid `GRLY-…` key + an email + password → it creates your account and signs you in with demo data.
 3. Open the web app URL, **Sign in** with the same email + password → you see the same garage.
 4. Add a customer on one, refresh the other → it appears. That's cloud sync. ✅
@@ -61,12 +64,12 @@ connect:
 
 ## What changed (for reference)
 
-- `GarageLY-Backend/migrations/0001_cloud_sync.sql` — applied live ✅
-- `GarageLY-Backend/netlify/functions/activate-account.ts` — new
+- `GarageDash-Backend/migrations/0001_cloud_sync.sql` — applied live ✅
+- `GarageDash-Backend/netlify/functions/activate-account.ts` — new
 - `src/lib/supabase.ts`, `src/lib/auth.ts`, `src/lib/cache.ts` — new
 - `src/lib/api.ts` — rewritten (Supabase, was Electron IPC)
 - `src/pages/Auth.tsx`, `src/components/DemoBanner.tsx` — new
 - `src/App.tsx`, `src/components/layout/Layout.tsx` — auth gating + sign out
-- `GarageLY-Web/` — new web app (shares `src/` via a Vite alias)
+- `GarageDash-Web/` — new web app (shares `src/` via a Vite alias)
 - The old desktop sql.js layer (`electron/database.ts`, `ipc.ts`, `db-wrapper.ts`)
   is now unused for data but left in place so the licence system still works.

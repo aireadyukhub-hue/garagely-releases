@@ -65,7 +65,7 @@ export default function TrialGate() {
         <div className="flex items-center gap-3 bg-[#1b1d23] border border-[#F4A523]/40 rounded-xl shadow-xl px-4 py-2.5">
           <Clock className="w-4 h-4 text-[#F4A523] shrink-0" />
           <span className="text-sm text-zinc-200 flex-1">
-            {d === 1 ? 'Your trial ends tomorrow.' : `Your trial ends in ${d} days.`} Set up payment to keep GarageLY running.
+            {d === 1 ? 'Your trial ends tomorrow.' : `Your trial ends in ${d} days.`} Set up payment to keep GarageDash running.
           </span>
           <button onClick={subscribe} disabled={checkingOut} className="btn-primary text-xs py-1 px-2.5 shrink-0">
             {checkingOut ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Subscribe'}
@@ -88,7 +88,7 @@ export default function TrialGate() {
           </div>
           <h2 className="text-lg font-semibold text-white mb-1">Your free trial has ended</h2>
           <p className="text-sm text-zinc-400 mb-5">
-            Hope you've been enjoying GarageLY! Set up payment to keep everything running with no interruption.
+            Hope you've been enjoying GarageDash! Set up payment to keep everything running with no interruption.
             {left > 0 && <> You can keep using it for <span className="text-zinc-200 font-medium">{left} more day{left !== 1 ? 's' : ''}</span> before payment is required.</>}
           </p>
           <div className="space-y-2">
@@ -111,7 +111,7 @@ export default function TrialGate() {
           {s.status === 'cancelled' ? 'Your subscription has ended' : 'Your trial has ended'}
         </h2>
         <p className="text-sm text-zinc-400 mb-5">
-          Set up payment to unlock GarageLY again. Your data is safe and will be exactly as you left it.
+          Set up payment to unlock GarageDash again. Your data is safe and will be exactly as you left it.
         </p>
         <div className="space-y-2">
           <SubscribeBtn full />

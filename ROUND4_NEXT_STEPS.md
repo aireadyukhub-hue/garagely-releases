@@ -1,4 +1,4 @@
-# GarageLY — Round 4 updates: what I built + what you need to do
+# GarageDash — Round 4 updates: what I built + what you need to do
 
 Code-complete and type-checked. Hosting is **Cloudflare** (Worker + Pages) — ignore old Netlify tabs.
 
@@ -26,7 +26,7 @@ account on file.
 4. Make sure **billing is enabled** on the project (Google won't return results otherwise).
 5. Put the key on the Worker and redeploy:
    ```
-   cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Worker"
+   cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Worker"
    wrangler secret put GOOGLE_PLACES_API_KEY
    # paste the key when prompted, then:
    wrangler deploy
@@ -35,13 +35,13 @@ Until this is done, the "Search local" button works but shows a friendly "not se
 
 ### 2. Deploy the Worker (also carries the new places-search endpoint)
 ```
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Worker" && wrangler deploy
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Worker" && wrangler deploy
 ```
 (If you did step 1's `wrangler deploy`, this is already done.)
 
 ### 3. Rebuild + deploy the web app (carries all 3 round-4 features)
 ```
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Web" && npm run build && wrangler pages deploy dist --project-name garagely-app
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Web" && npm run build && wrangler pages deploy dist --project-name garagedash-app
 ```
 
 ### 4. Desktop release (optional, when ready)

@@ -34,9 +34,9 @@ const JOKES = [
 
 const randomJoke = () => JOKES[Math.floor(Math.random() * JOKES.length)]
 const GREETINGS = [
-  `Hi, I'm ${MASCOT_NAME} — the 10mm that never gets lost 🔧 Ask me how to do anything in GarageLY (or ask for a joke, I've got loads).`,
-  `Alright? ${MASCOT_NAME} here, your favourite 10mm socket. Ask me anything about GarageLY — or fancy a quick car joke?`,
-  `${MASCOT_NAME} reporting for duty 🔧 Need a hand with GarageLY? Or shall I torque you through a joke first?`,
+  `Hi, I'm ${MASCOT_NAME} — the 10mm that never gets lost 🔧 Ask me how to do anything in GarageDash (or ask for a joke, I've got loads).`,
+  `Alright? ${MASCOT_NAME} here, your favourite 10mm socket. Ask me anything about GarageDash — or fancy a quick car joke?`,
+  `${MASCOT_NAME} reporting for duty 🔧 Need a hand with GarageDash? Or shall I torque you through a joke first?`,
 ]
 
 export const ROUTE_LABELS: Record<string, string> = {
@@ -199,7 +199,7 @@ export default function AssistantWidget() {
             <Mascot className="w-9 h-9" expression={asking ? 'thinking' : 'idle'} />
             <div className="leading-tight">
               <div className="text-sm font-semibold text-white">{MASCOT_NAME}</div>
-              <div className="text-[11px] text-zinc-500">The 10mm · your GarageLY helper</div>
+              <div className="text-[11px] text-zinc-500">The 10mm · your GarageDash helper</div>
             </div>
             <button onClick={() => { tellJoke() }} title="Tell me a joke"
               className="ml-auto text-zinc-500 hover:text-[#F4A523] transition-colors"><Smile className="w-4 h-4" /></button>

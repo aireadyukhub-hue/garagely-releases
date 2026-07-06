@@ -195,6 +195,8 @@ export interface Settings {
   jobsheet_footer?: string
   // Opening hours (per-weekday)
   opening_hours?: Record<string, { open: boolean; from: string; to: string }>
+  // Technician Mode PIN ('' = disabled)
+  tech_pin?: string
 }
 
 export interface PresetJobItem {
@@ -227,6 +229,7 @@ export interface InspectionItem {
   item: string
   status: InspectionStatus
   note?: string
+  photo?: string // base64 data URL, captured via device camera
 }
 
 export interface Inspection {

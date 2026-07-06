@@ -137,9 +137,9 @@ export async function activateLicence(key: string): Promise<{
 }> {
   const trimmed = key.trim().toUpperCase()
 
-  // Basic format check: GRLY-XXXX-XXXX-XXXX
-  if (!/^GRLY-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(trimmed)) {
-    return { success: false, error: 'Invalid licence key format. Expected: GRLY-XXXX-XXXX-XXXX' }
+  // Basic format check: GDSH-XXXX-XXXX-XXXX (legacy GRLY- keys remain valid)
+  if (!/^(?:GRLY|GDSH)-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(trimmed)) {
+    return { success: false, error: 'Invalid licence key format. Expected: GDSH-XXXX-XXXX-XXXX' }
   }
 
   const result = await validateWithBackend(trimmed)

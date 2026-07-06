@@ -74,12 +74,12 @@ export default function Help() {
         <div className="card-header flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-[#F4A523]" />
           <span className="text-sm font-medium text-zinc-300">Ask the assistant</span>
-          <span className="text-xs text-zinc-600 ml-auto">Answers how-to questions about GarageLY</span>
+          <span className="text-xs text-zinc-600 ml-auto">Answers how-to questions about GarageDash</span>
         </div>
         <div className="card-body space-y-3">
           {chat.length === 0 ? (
             <div className="text-sm text-zinc-500">
-              Ask me anything about using GarageLY — where a setting is, or how to do something.
+              Ask me anything about using GarageDash — where a setting is, or how to do something.
               <div className="flex flex-wrap gap-2 mt-3">
                 {SUGGESTIONS.map(s => (
                   <button key={s} onClick={() => ask(s)} className="text-xs px-2.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:border-[#F4A523]/50 hover:text-white transition-colors">{s}</button>
@@ -124,7 +124,7 @@ export default function Help() {
           </div>
           <p className="text-sm text-zinc-500">
             {type === 'feedback'
-              ? 'Got an idea or a feature request? Send it straight to the GarageLY team.'
+              ? 'Got an idea or a feature request? Send it straight to the GarageDash team.'
               : 'Stuck on something? Send us a message and we\'ll get back to you.'}
           </p>
           <div><label className="label">Subject</label><input className="input" value={subject} onChange={e => setSubject(e.target.value)} placeholder={type === 'feedback' ? 'e.g. Add a parts barcode scanner' : 'e.g. Can\'t print an invoice'} /></div>

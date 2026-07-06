@@ -61,7 +61,7 @@ export default function InstallPrompt() {
       <div className="flex items-center gap-3 bg-[#16181D] border border-[#F4A523]/40 rounded-2xl shadow-2xl px-4 py-3">
         <img src="/assets/pwa-192.png" alt="" className="w-9 h-9 rounded-lg shrink-0" />
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-white">Install GarageLY</div>
+          <div className="text-sm font-semibold text-white">Install GarageDash</div>
           {isIOS ? (
             <div className="text-xs text-zinc-400 flex items-center gap-1 flex-wrap">
               Tap <Share className="w-3.5 h-3.5 inline text-blue-400" /> then “Add to Home Screen”

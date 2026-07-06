@@ -172,6 +172,30 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* Technician Mode */}
+        <div className="card">
+          <div className="card-header"><span className="text-sm font-medium text-zinc-300">Technician Mode</span></div>
+          <div className="card-body space-y-3">
+            <p className="text-xs text-zinc-500">
+              A simplified view for shared workshop devices — technicians only see Calendar,
+              Job Sheets, Customers, Vehicles and Inspections, no pricing, reports or settings.
+              Turn it on from the sidebar on that device. Set a PIN here so only you can switch
+              it back off.
+            </p>
+            <div className="max-w-xs">
+              <label className="label">Technician Mode PIN</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="input"
+                placeholder="e.g. 4821 (leave blank to disable)"
+                value={settings.tech_pin || ''}
+                onChange={F('tech_pin')}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Opening Hours */}
         <div className="card">
           <div className="card-header"><span className="text-sm font-medium text-zinc-300">Opening Hours</span></div>

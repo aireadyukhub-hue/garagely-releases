@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>You're in — GarageDash</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/motion-kit.css" />
+
+  <!-- Google Analytics 4 — same Measurement ID as index.html. This page is
+       the real "trial started" conversion point (fired once the licence key
+       is confirmed, i.e. the trial actually exists), so it's the one worth
+       pointing Google/Meta ad conversion tracking at once those are set up. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SK6KEQSJDG"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SK6KEQSJDG');
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --orange: #F4A523;
+      --bg: #0f1117;
+      --bg2: #161820;
+      --bg3: #1e2030;
+      --border: #2a2d3e;
+      --text: #e8eaf0;
+      --muted: #8b8fa8;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3rem 2.5rem;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+    }
+    .tick {
+      width: 64px; height: 64px;
+      background: rgba(52,211,153,0.15);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.75rem;
+      margin: 0 auto 1.5rem;
+    }
+    h1 { font-size: 1.75rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 2.5rem; line-height: 1.65; }
+
+    .key-box {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .key-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+    .key-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--orange);
+      font-family: 'Courier New', monospace;
+      margin-bottom: 0.75rem;
+      min-height: 2rem;
+    }
+    .copy-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+    .steps {
+      text-align: left;
+      margin-bottom: 2rem;
+    }
+    .steps h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .step {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 0.85rem;
+      align-items: flex-start;
+    }
+    .step-num {
+      width: 24px; height: 24px;
+      background: rgba(244,165,35,0.15);
+      color: var(--orange);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step p { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
+    .step p strong { color: var(--text); }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--orange);
+      color: #000;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.9rem 2rem;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-download:hover { background: #d4891a; }
+
+    .loading { color: var(--muted); font-size: 0.88rem; }
+    .error-note { color: #f87171; font-size: 0.82rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="card hero-in">
+    <div class="tick">✓</div>
+    <h1>You're all set!</h1>
+    <p class="sub">Your 14-day free trial has started. <strong style="color:var(--text)">Save your licence key below</strong> — you'll need it to activate the app and to sign in on any other device.</p>
+
+    <div class="key-box">
+      <div class="key-label">Your Licence Key</div>
+      <div class="key-value" id="key-display">
+        <span class="loading">Fetching your key…</span>
+      </div>
+      <button class="copy-btn" id="copy-btn" onclick="copyKey()" style="display:none">Copy key</button>
+      <p id="save-note" style="display:none; margin-top:1rem; font-size:0.9rem; color:var(--orange); font-weight:600; line-height:1.5;">⚠️ Save this key now — take a screenshot or write it down. You'll need it to activate the app and to log in on any other device.</p>
+    </div>
+    <div id="key-error" class="error-note" style="display:none"></div>
+
+    <div class="steps">
+      <h3>Next steps</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <p><strong>Download GarageDash</strong> using the button below and install it on your Mac or Windows PC.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <p><strong>Open the app</strong> — you'll see an activation screen asking for your licence key.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <p><strong>Enter the key above</strong> and click Activate. You're in.</p>
+      </div>
+    </div>
+
+    <a href="https://github.com/aireadyukhub-hue/garagely-releases/releases/latest" class="btn-download" target="_blank">
+      ⬇ Download GarageDash
+    </a>
+  </div>
+
+  <script>
+    const BACKEND = 'https://garagely-backend.garagely.workers.dev'
+    let licenceKey = null
+
+    async function fetchKey(attempt = 0) {
+      const params = new URLSearchParams(window.location.search)
+      const sessionId = params.get('session_id')
+
+      if (!sessionId) {
+        showKeyError('No session found. Please contact info@garagedash.co.uk with your order email.')
+        return
+      }
+
+      try {
+        const res = await fetch(`${BACKEND}/.netlify/functions/get-key-by-session?session_id=${sessionId}`)
+        const data = await res.json()
+        if (data.key) {
+          licenceKey = data.key
+          document.getElementById('key-display').textContent = data.key
+          document.getElementById('copy-btn').style.display = 'inline-block'
+          document.getElementById('save-note').style.display = 'block'
+          // Real conversion signal: the trial licence actually exists now.
+          if (window.gtag) gtag('event', 'trial_activated', { event_category: 'trial_funnel', currency: 'GBP', value: 29 })
+          return
+        }
+      } catch { /* fall through to retry */ }
+
+      // The webhook can take a few seconds to create the key — retry quietly.
+      if (attempt < 10) {
+        document.getElementById('key-display').innerHTML =
+          '<span class="loading">Generating your key…</span>'
+        setTimeout(() => fetchKey(attempt + 1), 2500)
+      } else {
+        showKeyError('Key is taking longer than usual. Please refresh this page in a minute, or email info@garagedash.co.uk and we\'ll send it over.')
+      }
+    }
+
+    function showKeyError(msg) {
+      document.getElementById('key-display').textContent = '—'
+      document.getElementById('key-error').textContent = msg
+      document.getElementById('key-error').style.display = 'block'
+    }
+
+    function copyKey() {
+      if (!licenceKey) return
+      navigator.clipboard.writeText(licenceKey).then(() => {
+        const btn = document.getElementById('copy-btn')
+        btn.textContent = 'Copied!'
+        setTimeout(() => btn.textContent = 'Copy key', 2000)
+      })
+    }
+
+    fetchKey()
+  </script>
+  <script src="/motion-kit.js"></script>
+</body>
+</html>

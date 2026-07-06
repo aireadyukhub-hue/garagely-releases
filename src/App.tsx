@@ -50,7 +50,7 @@ export default function App() {
       <div className="min-h-screen bg-[#16181D] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-[#F4A523] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[#6B7280] text-sm">Starting GarageLY…</p>
+          <p className="text-[#6B7280] text-sm">Starting GarageDash…</p>
         </div>
       </div>
     )

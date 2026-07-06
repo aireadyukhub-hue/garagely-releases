@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react'
-import { useLocation, Link } from 'react-router-dom'
+import { useLocation, useNavigate, Link } from 'react-router-dom'
 import api from '@/lib/api'
 import {
   LayoutDashboard, Users, Car, Wrench, FileText,
   Calendar, Package, BarChart3, Settings, ChevronLeft, ChevronRight,
-  Quote, LogOut, Truck, LifeBuoy, HardHat, ListChecks, Menu, X, ClipboardCheck, Bug
+  Quote, LogOut, Truck, LifeBuoy, HardHat, ListChecks, Menu, X, ClipboardCheck, Bug, Lock, LogIn
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/lib/auth'
 import AssistantWidget from '@/components/AssistantWidget'
+import Modal from '@/components/ui/Modal'
+import { isTechModeOn, enterTechMode, exitTechMode, isPathAllowedInTechMode, TECH_MODE_EVENT } from '@/lib/techMode'
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -30,11 +32,25 @@ const NAV_ITEMS = [
   { path: '/help', label: 'Help & Feedback', icon: LifeBuoy },
 ]
 
+// What a technician sees on a shared workshop device: bookings, job sheets,
+// customers, cars, and inspection sheets — nothing about pricing, reports or
+// business settings.
+const TECH_NAV_PATHS = ['/calendar', '/jobs', '/customers', '/vehicles', '/inspections']
+const TECH_NAV_ITEMS = TECH_NAV_PATHS
+  .map((p) => NAV_ITEMS.find((n) => n.path === p))
+  .filter((n): n is (typeof NAV_ITEMS)[number] => !!n)
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)   // off-canvas drawer (narrow screens)
   const [logo, setLogo] = useState<string | null>(null)
+  const [techPin, setTechPin] = useState('')
+  const [techMode, setTechMode] = useState(isTechModeOn())
+  const [exitModalOpen, setExitModalOpen] = useState(false)
+  const [pinInput, setPinInput] = useState('')
+  const [pinError, setPinError] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
 
   // Customer's logo + brand accent for the top-centre header (refresh when saved).
   useEffect(() => {
@@ -50,8 +66,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const loadSettings = () =>
       api.getSettings()
         .then((s) => {
-          const cfg = (s || {}) as { logo_data?: string | null; accent_color?: string | null; ui_density?: string | null }
+          const cfg = (s || {}) as { logo_data?: string | null; accent_color?: string | null; ui_density?: string | null; tech_pin?: string }
           setLogo(cfg.logo_data ?? null)
+          setTechPin(cfg.tech_pin || '')
           const accent = cfg.accent_color || '#1F6FEB'
           document.documentElement.style.setProperty('--accent', accent)
           document.documentElement.style.setProperty('--accent-hover', lighten(accent))
@@ -63,10 +80,43 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('settings-updated', loadSettings)
   }, [])
 
+  // Technician Mode state (per-device, localStorage) — react to toggles from
+  // this tab or another one.
+  useEffect(() => {
+    const sync = () => setTechMode(isTechModeOn())
+    window.addEventListener(TECH_MODE_EVENT, sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener(TECH_MODE_EVENT, sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
+
+  // While in Technician Mode, keep navigation confined to the allowed pages
+  // even if someone types a restricted URL directly.
+  useEffect(() => {
+    if (techMode && !isPathAllowedInTechMode(location.pathname)) {
+      navigate('/calendar', { replace: true })
+    }
+  }, [techMode, location.pathname, navigate])
+
   // Close the mobile drawer whenever the route changes.
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/')
+
+  const navItems = techMode ? TECH_NAV_ITEMS : NAV_ITEMS
+
+  const openExitModal = () => { setPinInput(''); setPinError(false); setExitModalOpen(true) }
+  const attemptExit = () => {
+    if (!techPin || pinInput === techPin) {
+      exitTechMode()
+      setExitModalOpen(false)
+      navigate('/dashboard')
+    } else {
+      setPinError(true)
+    }
+  }
 
   return (
     <div className="flex h-screen bg-[#16181D] overflow-hidden">
@@ -86,7 +136,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           collapsed ? 'lg:w-[60px]' : 'lg:w-[220px]'
         )}
       >
-        {/* Logo area. GarageLY branding kept in the corner; the customer's own
+        {/* Logo area. GarageDash branding kept in the corner; the customer's own
             logo (if set) shows top-centre via the main top bar. pt-5 clears the
             macOS traffic-light buttons on the desktop build. */}
         <div
@@ -99,24 +149,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {collapsed ? (
             <>
               <img
-                src="./assets/garagely-mark.svg"
-                alt="GarageLY"
+                src="./assets/garagedash-mark.svg"
+                alt="GarageDash"
                 className="w-11 h-11 titlebar-no-drag hidden lg:block"
-                onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagely-mark.svg' }}
+                onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagedash-mark.svg' }}
               />
               <img
-                src="./assets/garagely-logo-dark.svg"
-                alt="GarageLY"
+                src="./assets/garagedash-logo-dark.svg"
+                alt="GarageDash"
                 className="h-11 titlebar-no-drag lg:hidden"
-                onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagely-logo-dark.svg' }}
+                onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagedash-logo-dark.svg' }}
               />
             </>
           ) : (
             <img
-              src="./assets/garagely-logo-dark.svg"
-              alt="GarageLY"
+              src="./assets/garagedash-logo-dark.svg"
+              alt="GarageDash"
               className="h-11 titlebar-no-drag"
-              onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagely-logo-dark.svg' }}
+              onError={(e) => { (e.target as HTMLImageElement).src = '/assets/garagedash-logo-dark.svg' }}
             />
           )}
           {/* Close button (mobile drawer only) */}
@@ -127,7 +177,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Nav items */}
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map(({ path, label, icon: Icon }) => (
+          {navItems.map(({ path, label, icon: Icon }) => (
             <Link
               key={path}
               to={path}
@@ -143,19 +193,50 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
+        {/* Technician Mode toggle */}
+        <div className="px-2 pb-1">
+          {techMode ? (
+            <button
+              onClick={openExitModal}
+              title={collapsed ? 'Exit Technician Mode' : undefined}
+              className={cn(
+                'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[#F4A523] bg-[#F4A523]/10 hover:bg-[#F4A523]/15 transition-colors text-sm font-medium',
+                collapsed ? 'lg:justify-center' : ''
+              )}
+            >
+              <Lock className="w-4 h-4" />
+              <span className={cn(collapsed ? 'lg:hidden' : '')}>Exit Technician Mode</span>
+            </button>
+          ) : (
+            <button
+              onClick={enterTechMode}
+              title={collapsed ? 'Technician Mode' : undefined}
+              className={cn(
+                'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors text-sm',
+                collapsed ? 'lg:justify-center' : ''
+              )}
+            >
+              <HardHat className="w-4 h-4" />
+              <span className={cn(collapsed ? 'lg:hidden' : '')}>Technician Mode</span>
+            </button>
+          )}
+        </div>
+
         {/* Sign out + collapse toggle */}
         <div className="px-2 pb-3 space-y-0.5 pwa-safe-bottom">
-          <button
-            onClick={() => signOut()}
-            title={collapsed ? 'Sign out' : undefined}
-            className={cn(
-              'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors text-sm',
-              collapsed ? 'lg:justify-center' : ''
-            )}
-          >
-            <LogOut className="w-4 h-4" />
-            <span className={cn(collapsed ? 'lg:hidden' : '')}>Sign out</span>
-          </button>
+          {!techMode && (
+            <button
+              onClick={() => signOut()}
+              title={collapsed ? 'Sign out' : undefined}
+              className={cn(
+                'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors text-sm',
+                collapsed ? 'lg:justify-center' : ''
+              )}
+            >
+              <LogOut className="w-4 h-4" />
+              <span className={cn(collapsed ? 'lg:hidden' : '')}>Sign out</span>
+            </button>
+          )}
           {/* Collapse toggle is desktop-only (drawer handles narrow screens) */}
           <button
             onClick={() => setCollapsed(c => !c)}
@@ -173,6 +254,42 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </aside>
+
+      {/* Exit Technician Mode — PIN check */}
+      <Modal
+        open={exitModalOpen}
+        onClose={() => setExitModalOpen(false)}
+        title="Exit Technician Mode"
+        footer={<>
+          <button onClick={() => setExitModalOpen(false)} className="btn-secondary">Cancel</button>
+          <button onClick={attemptExit} className="btn-primary"><LogIn className="w-4 h-4" /> Exit</button>
+        </>}
+      >
+        <div className="space-y-3">
+          {techPin ? (
+            <>
+              <label className="label">Enter the Technician Mode PIN</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                autoFocus
+                className="input"
+                value={pinInput}
+                onChange={(e) => { setPinInput(e.target.value); setPinError(false) }}
+                onKeyDown={(e) => { if (e.key === 'Enter') attemptExit() }}
+                placeholder="••••"
+              />
+              {pinError && <p className="text-red-400 text-xs">Wrong PIN — try again.</p>}
+            </>
+          ) : (
+            <p className="text-zinc-400 text-sm">
+              No PIN is set yet, so anyone can exit Technician Mode. Set one in
+              Settings → Technician Mode so technicians can't switch back to the
+              full view themselves.
+            </p>
+          )}
+        </div>
+      </Modal>
 
       {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">

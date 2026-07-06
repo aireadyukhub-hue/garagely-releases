@@ -38,7 +38,7 @@ export default function UpdateBanner() {
             </div>
             <h2 className="text-white text-lg font-semibold">Update ready</h2>
             <p className="text-zinc-400 text-sm mt-1.5">
-              GarageLY <span className="text-zinc-200 font-medium">v{updateVersion}</span> has been
+              GarageDash <span className="text-zinc-200 font-medium">v{updateVersion}</span> has been
               downloaded. Restart now to finish updating.
             </p>
           </div>
@@ -58,7 +58,7 @@ export default function UpdateBanner() {
             </button>
           </div>
           <p className="text-center text-zinc-600 text-xs pb-4 px-6">
-            Or it'll update automatically next time you close GarageLY.
+            Or it'll update automatically next time you close GarageDash.
           </p>
         </div>
       </div>

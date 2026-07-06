@@ -1,4 +1,8 @@
-# GarageLY — getgaragely.com Domain Rollout
+# GarageDash — getgaragely.com Domain Rollout
+
+> STATUS: historical — getgaragely.com rollout completed 2026-06-30. Superseded by the
+> garagedash.co.uk cutover (2026-07-06, see `garagedash-rebrand` memory). getgaragely.com stays
+> live in parallel, not deleted.
 
 All code changes are done. You just need to run some terminal commands and do a few clicks in Cloudflare.
 
@@ -6,25 +10,25 @@ All code changes are done. You just need to run some terminal commands and do a 
 
 ## 1. Deploy Worker (picks up new SITE_URL + SENDGRID_FROM)
 ```bash
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Worker"
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Worker"
 wrangler deploy
 ```
 
 ## 2. Rebuild + deploy web app
 ```bash
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Web"
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Web"
 npm run build && wrangler pages deploy dist --project-name garagely-app
 ```
 
 ## 3. Deploy marketing site
 ```bash
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Website"
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Website"
 wrangler pages deploy . --project-name garagely
 ```
 
 ## 4. Deploy admin
 ```bash
-cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageLY-Admin"
+cd "/Users/lewisfelix/Documents/Claude/Projects/GarageLY/GarageDash-Admin"
 npm run build && wrangler pages deploy dist --project-name garagely-admin
 ```
 
@@ -88,9 +92,9 @@ git tag v1.2.4 && git push origin v1.2.4
 
 ## What was updated in code
 - `wrangler.toml`: SITE_URL → getgaragely.com, added SENDGRID_FROM
-- `GarageLY-Worker/src/index.ts`: fallback URL + invite email URLs
-- `GarageLY-Admin/src/pages/CreateTrial.tsx`: SITE_URL + WEB_URL
+- `GarageDash-Worker/src/index.ts`: fallback URL + invite email URLs
+- `GarageDash-Admin/src/pages/CreateTrial.tsx`: SITE_URL + WEB_URL
 - `src/pages/Auth.tsx`: trial link + support email
 - `src/pages/Activate.tsx`: website link + support email
-- `GarageLY-Website/index.html`: footer email
-- `GarageLY-Website/success.html`: support email in error messages
+- `GarageDash-Website/index.html`: footer email
+- `GarageDash-Website/success.html`: support email in error messages

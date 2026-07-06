@@ -1,4 +1,4 @@
-// GarageLY data layer — Supabase implementation of the app API.
+// GarageDash data layer — Supabase implementation of the app API.
 // Shared verbatim by the desktop (Electron renderer) and the web app.
 // Replaces the old Electron IPC bridge; return shapes match what the pages
 // already expect (flat joined rows), so no page changes are required.
@@ -714,7 +714,7 @@ const api = {
 }
 
 // Kept for type-compatibility with existing imports.
-export interface GaragelyAPI {
+export interface GarageDashAPI {
   [key: string]: (...args: any[]) => Promise<any>
 }
 

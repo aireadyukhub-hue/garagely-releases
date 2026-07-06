@@ -12,11 +12,12 @@ export default function Activate({ onActivated }: Props) {
   const [success, setSuccess] = useState(false)
 
   function formatKey(raw: string) {
-    // Auto-format as user types: GRLY-XXXX-XXXX-XXXX
+    // Auto-format as user types: GDSH-XXXX-XXXX-XXXX (legacy GRLY too)
     const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '')
     const parts: string[] = []
-    if (clean.startsWith('GRLY')) {
-      parts.push('GRLY')
+    const prefix = ['GDSH', 'GRLY'].find((p) => clean.startsWith(p))
+    if (prefix) {
+      parts.push(prefix)
       const rest = clean.slice(4)
       for (let i = 0; i < 3; i++) {
         if (rest.slice(i * 4, i * 4 + 4)) parts.push(rest.slice(i * 4, i * 4 + 4))
@@ -57,21 +58,21 @@ export default function Activate({ onActivated }: Props) {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#F4A523] mb-4">
             <KeyRound className="w-8 h-8 text-[#16181D]" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">GarageLY</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight">GarageDash</h1>
           <p className="text-[#9CA3AF] mt-1 text-sm">Professional Garage Management</p>
         </div>
 
         <div className="bg-[#1F2128] rounded-2xl p-8 border border-[#2A2D35]">
           <h2 className="text-xl font-semibold text-white mb-1">Activate Your Licence</h2>
           <p className="text-[#9CA3AF] text-sm mb-6">
-            Enter your licence key to unlock GarageLY. Don't have one?{' '}
+            Enter your licence key to unlock GarageDash. Don't have one?{' '}
             <a
-              href="https://getgaragely.com"
+              href="https://garagedash.co.uk"
               className="text-[#F4A523] hover:underline cursor-pointer"
               onClick={(e) => {
                 e.preventDefault()
                 // Opens in default browser via shell.openExternal (handled by main.ts)
-                window.open('https://getgaragely.com', '_blank')
+                window.open('https://garagedash.co.uk', '_blank')
               }}
             >
               Get a free trial
@@ -93,7 +94,7 @@ export default function Activate({ onActivated }: Props) {
                   type="text"
                   value={key}
                   onChange={(e) => setKey(formatKey(e.target.value))}
-                  placeholder="GRLY-XXXX-XXXX-XXXX"
+                  placeholder="GDSH-XXXX-XXXX-XXXX"
                   maxLength={19}
                   spellCheck={false}
                   className="w-full bg-[#16181D] border border-[#2A2D35] rounded-xl px-4 py-3 text-white font-mono text-sm placeholder-[#4B5563] focus:outline-none focus:border-[#F4A523] transition-colors"
@@ -119,7 +120,7 @@ export default function Activate({ onActivated }: Props) {
                     Activating…
                   </>
                 ) : (
-                  'Activate GarageLY'
+                  'Activate GarageDash'
                 )}
               </button>
             </form>
@@ -130,9 +131,9 @@ export default function Activate({ onActivated }: Props) {
           Need help?{' '}
           <span
             className="text-[#9CA3AF] cursor-pointer hover:text-[#F4A523]"
-            onClick={() => window.open('mailto:info@getgaragely.com', '_blank')}
+            onClick={() => window.open('mailto:info@garagedash.co.uk', '_blank')}
           >
-            info@getgaragely.com
+            info@garagedash.co.uk
           </span>
         </p>
       </div>
