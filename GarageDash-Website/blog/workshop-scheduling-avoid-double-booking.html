@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workshop Scheduling: How to Stop Double-Booking Bays and Technicians | GarageDash</title>
+  <link rel="icon" type="image/svg+xml" href="/garagedash-icon.svg" />
+  <meta name="description" content="The common causes of double-booking in a busy UK workshop, and a simple scheduling workflow that catches bay and technician clashes before they cost you a day." />
+  <link rel="canonical" href="https://garagedash.co.uk/blog/workshop-scheduling-avoid-double-booking.html" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="GarageDash" />
+  <meta property="og:title" content="Workshop Scheduling: How to Stop Double-Booking Bays and Technicians" />
+  <meta property="og:description" content="The common causes of double-booking, and a scheduling workflow that catches clashes before they cost you a day." />
+  <meta property="og:url" content="https://garagedash.co.uk/blog/workshop-scheduling-avoid-double-booking.html" />
+  <meta property="og:image" content="https://garagedash.co.uk/garagedash-badge.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Workshop Scheduling: How to Stop Double-Booking Bays and Technicians" />
+  <meta name="twitter:description" content="The common causes of double-booking, and a scheduling workflow that catches clashes before they cost you a day." />
+  <meta name="twitter:image" content="https://garagedash.co.uk/garagedash-badge.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "GarageDash", "item": "https://garagedash.co.uk/" },
+      { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://garagedash.co.uk/blog/" },
+      { "@type": "ListItem", "position": 3, "name": "Workshop Scheduling", "item": "https://garagedash.co.uk/blog/workshop-scheduling-avoid-double-booking.html" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Workshop scheduling: how to stop double-booking bays and technicians",
+    "datePublished": "2026-07-06",
+    "dateModified": "2026-07-06",
+    "author": { "@type": "Organization", "name": "GarageDash" },
+    "publisher": { "@type": "Organization", "name": "GarageDash", "logo": { "@type": "ImageObject", "url": "https://garagedash.co.uk/garagedash-badge.png" } },
+    "mainEntityOfPage": "https://garagedash.co.uk/blog/workshop-scheduling-avoid-double-booking.html",
+    "description": "The common causes of double-booking in a busy UK workshop, and a simple scheduling workflow that catches bay and technician clashes before they cost you a day."
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SK6KEQSJDG"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SK6KEQSJDG');
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --orange: #F4A523; --orange-dark: #d4891a;
+      --bg: #0f1117; --bg2: #161820; --bg3: #1e2030;
+      --border: #2a2d3e; --text: #e8eaf0; --muted: #8b8fa8;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    a { color: var(--orange); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 2rem; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: rgba(15,17,23,0.92); backdrop-filter: blur(12px); z-index: 100;
+    }
+    .logo img { height: 46px; display: block; }
+    .nav-links { display: flex; align-items: center; gap: 1.75rem; }
+    .nav-links a { color: var(--muted); font-size: 0.88rem; font-weight: 500; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .btn-nav { background: var(--orange); color: #000; font-weight: 600; font-size: 0.9rem; padding: 0.55rem 1.25rem; border-radius: 8px; border: none; cursor: pointer; }
+    .btn-nav:hover { background: var(--orange-dark); text-decoration: none; }
+
+    main { max-width: 720px; margin: 0 auto; padding: 3.5rem 2rem 5rem; }
+    .back-link { display: inline-block; font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+    .eyebrow { color: var(--orange); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.75rem; }
+    .post-date { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+    h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; margin-bottom: 1.5rem; }
+
+    .article-body h2 { font-size: 1.3rem; font-weight: 700; margin: 2.25rem 0 1rem; }
+    .article-body h3 { font-size: 1.05rem; font-weight: 700; margin: 1.75rem 0 0.75rem; }
+    .article-body p { color: var(--muted); margin-bottom: 1.1rem; font-size: 1rem; }
+    .article-body strong { color: var(--text); }
+    .article-body ul, .article-body ol { color: var(--muted); margin: 0 0 1.1rem 1.4rem; }
+    .article-body li { margin-bottom: 0.5rem; }
+
+    .inline-cta {
+      background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--orange);
+      border-radius: 10px; padding: 1.25rem 1.5rem; margin: 2rem 0; font-size: 0.95rem;
+    }
+    .inline-cta strong { color: var(--text); }
+
+    .cta-block { text-align: center; background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 3rem 2rem; margin-top: 3.5rem; }
+    .cta-block h2 { font-size: 1.5rem; margin-bottom: 0.75rem; }
+    .cta-block p { color: var(--muted); margin-bottom: 1.5rem; }
+    .btn-primary { background: var(--orange); color: #000; font-weight: 700; font-size: 1rem; padding: 0.85rem 2rem; border-radius: 10px; border: none; cursor: pointer; display: inline-block; }
+    .btn-primary:hover { background: var(--orange-dark); text-decoration: none; }
+    .cta-note { font-size: 0.8rem; color: var(--muted); margin-top: 1rem; }
+
+    footer { padding: 2.5rem 2rem; text-align: center; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><img src="/garagedash-logo-dark.png" alt="GarageDash" /></a>
+  <div class="nav-links">
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/compare.html">Compare</a>
+    <a href="/blog/">Blog</a>
+  </div>
+  <a href="/#pricing" class="btn-nav">Start Free Trial</a>
+</nav>
+
+<main>
+  <a class="back-link" href="/blog/">← Back to blog</a>
+  <div class="eyebrow">Workshop operations</div>
+  <p class="post-date">6 July 2026</p>
+  <h1>Workshop scheduling: how to stop double-booking bays and technicians</h1>
+
+  <div class="article-body">
+    <p>Double-booking rarely happens because someone's careless. It happens because the person
+    taking a booking on the phone can't see the same information as the person standing at the
+    workshop planning the day — and by the time the mismatch surfaces, the customer's already been
+    told a time.</p>
+
+    <h2>The three usual causes</h2>
+    <ul>
+      <li><strong>The booking system and the workshop floor are different places.</strong> A wall
+      planner or whiteboard in the workshop doesn't update itself when the front desk takes a call.</li>
+      <li><strong>Technician availability isn't visible when the booking is made.</strong> A day off,
+      a training day, or someone running long on a previous job doesn't show up until it's too late.</li>
+      <li><strong>Estimated job length is a guess, not a number.</strong> If nobody has a sense of
+      how long a clutch job actually takes versus a service, back-to-back bookings quietly overrun.</li>
+    </ul>
+
+    <h2>A scheduling workflow that catches clashes early</h2>
+    <p>The fix isn't more discipline — it's making the clash visible at the point the booking is
+    made, not after. In practice that means three things working together:</p>
+    <ol>
+      <li><strong>One shared calendar</strong>, visible to whoever's taking bookings and whoever's
+      running the workshop, rather than two separate records of the same day.</li>
+      <li><strong>Technician time-off and existing jobs shown on the same view</strong>, so a booking
+      can't be offered against someone who isn't actually available.</li>
+      <li><strong>Realistic time estimates per job type</strong>, so a booking reflects how long the
+      work actually takes rather than a rough guess.</li>
+    </ol>
+
+    <div class="inline-cta">
+      <strong>Where this fits in GarageDash:</strong> the booking calendar shows bookings, jobs in
+      progress and technician time-off together, and a preset-jobs library gives labour-time
+      estimates for common UK jobs — see <a href="/garage-booking-system.html">garage booking
+      system</a> for how the calendar works day to day.
+    </div>
+
+    <h2>Why this compounds over time</h2>
+    <p>A single double-booking is an awkward phone call. A pattern of double-booking is customers
+    quietly deciding your garage is disorganised, even if the actual repair work is excellent —
+    scheduling reliability is one of the few things customers can judge before they've even had the
+    car looked at. Getting it visibly right is one of the cheapest ways to build trust with a new
+    customer.</p>
+  </div>
+
+  <div class="cta-block">
+    <h2>See every booking and job at a glance</h2>
+    <p>One calendar for the whole team, included in every GarageDash plan.</p>
+    <a href="/#pricing" class="btn-primary">Start 14-Day Free Trial →</a>
+    <p class="cta-note">£29/month after trial · Unlimited users · No contract</p>
+  </div>
+</main>
+
+<footer>
+  <p>© 2026 GarageDash · <a href="mailto:info@garagedash.co.uk">info@garagedash.co.uk</a> · <a href="/">Home</a> · <a href="/blog/">Blog</a></p>
+</footer>
+
+</body>
+</html>

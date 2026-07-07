@@ -1,6 +1,6 @@
 {
   "name": "garagedash",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Garage Management System",
   "main": "dist-electron/main.js",
   "scripts": {

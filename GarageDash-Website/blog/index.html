@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The GarageDash Blog | Running a UK Independent Garage</title>
+  <link rel="icon" type="image/svg+xml" href="/garagedash-icon.svg" />
+  <meta name="description" content="Practical guides for UK independent garages and mobile mechanics: MOT reminders, workshop scheduling, VAT on parts and labour, and running a workshop day to day." />
+  <link rel="canonical" href="https://garagedash.co.uk/blog/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="GarageDash" />
+  <meta property="og:title" content="The GarageDash Blog" />
+  <meta property="og:description" content="Practical guides for UK independent garages: MOT reminders, workshop scheduling, VAT on parts and labour." />
+  <meta property="og:url" content="https://garagedash.co.uk/blog/" />
+  <meta property="og:image" content="https://garagedash.co.uk/garagedash-badge.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="The GarageDash Blog" />
+  <meta name="twitter:description" content="Practical guides for UK independent garages: MOT reminders, workshop scheduling, VAT on parts and labour." />
+  <meta name="twitter:image" content="https://garagedash.co.uk/garagedash-badge.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "GarageDash", "item": "https://garagedash.co.uk/" },
+      { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://garagedash.co.uk/blog/" }
+    ]
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SK6KEQSJDG"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SK6KEQSJDG');
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --orange: #F4A523; --orange-dark: #d4891a;
+      --bg: #0f1117; --bg2: #161820; --bg3: #1e2030;
+      --border: #2a2d3e; --text: #e8eaf0; --muted: #8b8fa8;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    a { color: var(--orange); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 2rem; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: rgba(15,17,23,0.92); backdrop-filter: blur(12px); z-index: 100;
+    }
+    .logo img { height: 46px; display: block; }
+    .nav-links { display: flex; align-items: center; gap: 1.75rem; }
+    .nav-links a { color: var(--muted); font-size: 0.88rem; font-weight: 500; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .btn-nav { background: var(--orange); color: #000; font-weight: 600; font-size: 0.9rem; padding: 0.55rem 1.25rem; border-radius: 8px; border: none; cursor: pointer; }
+    .btn-nav:hover { background: var(--orange-dark); text-decoration: none; }
+
+    main { max-width: 840px; margin: 0 auto; padding: 3.5rem 2rem 5rem; }
+    .eyebrow { color: var(--orange); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.75rem; }
+    h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 1.25rem; }
+    .lede { color: var(--muted); font-size: 1.1rem; max-width: 620px; margin-bottom: 3rem; }
+
+    .post-list { display: flex; flex-direction: column; gap: 1.25rem; }
+    .post-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1.75rem; transition: border-color 0.2s;
+    }
+    .post-card:hover { border-color: rgba(244,165,35,0.4); }
+    .post-date { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.5rem; }
+    .post-card h2 { font-size: 1.2rem; margin-bottom: 0.6rem; }
+    .post-card h2 a { color: var(--text); }
+    .post-card h2 a:hover { color: var(--orange); text-decoration: none; }
+    .post-card p { color: var(--muted); font-size: 0.92rem; margin-bottom: 0.75rem; }
+    .post-read { font-size: 0.85rem; font-weight: 600; }
+
+    footer { padding: 2.5rem 2rem; text-align: center; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><img src="/garagedash-logo-dark.png" alt="GarageDash" /></a>
+  <div class="nav-links">
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/compare.html">Compare</a>
+    <a href="/best-garage-management-software-uk.html">Best in UK</a>
+    <a href="/blog/">Blog</a>
+  </div>
+  <a href="/#pricing" class="btn-nav">Start Free Trial</a>
+</nav>
+
+<main>
+  <div class="eyebrow">Blog</div>
+  <h1>Running a UK independent garage</h1>
+  <p class="lede">Practical guides on the day-to-day of running a workshop — reminders, scheduling, VAT, and the operational stuff that actually keeps a garage profitable.</p>
+
+  <div class="post-list">
+    <div class="post-card">
+      <div class="post-date">6 July 2026</div>
+      <h2><a href="/blog/mot-reminder-workflows.html">MOT reminder workflows that actually get customers back in</a></h2>
+      <p>Why "we'll remember to call" doesn't scale past a handful of customers, and the workflow that turns MOT due dates into a reliable source of repeat bookings.</p>
+      <a class="post-read" href="/blog/mot-reminder-workflows.html">Read more →</a>
+    </div>
+    <div class="post-card">
+      <div class="post-date">6 July 2026</div>
+      <h2><a href="/blog/workshop-scheduling-avoid-double-booking.html">Workshop scheduling: how to stop double-booking bays and technicians</a></h2>
+      <p>The common causes of double-booking in a busy workshop, and a simple scheduling workflow that catches clashes before they cost you a day.</p>
+      <a class="post-read" href="/blog/workshop-scheduling-avoid-double-booking.html">Read more →</a>
+    </div>
+    <div class="post-card">
+      <div class="post-date">6 July 2026</div>
+      <h2><a href="/blog/vat-on-parts-and-labour-uk-garages.html">UK VAT on parts and labour: a practical guide for independent garages</a></h2>
+      <p>How VAT typically applies to parts and labour on a garage invoice, common mistakes, and why this is one area worth double-checking with an accountant.</p>
+      <a class="post-read" href="/blog/vat-on-parts-and-labour-uk-garages.html">Read more →</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p>© 2026 GarageDash · <a href="mailto:info@garagedash.co.uk">info@garagedash.co.uk</a> · <a href="/">Home</a> · <a href="/compare.html">Compare</a></p>
+</footer>
+
+</body>
+</html>
