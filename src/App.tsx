@@ -20,6 +20,7 @@ import Suppliers from './pages/Suppliers'
 import Team from './pages/Team'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
+import Import from './pages/Import'
 import Help from './pages/Help'
 import Auth from './pages/Auth'
 import UpdateBanner from './components/UpdateBanner'
@@ -85,6 +86,7 @@ export default function App() {
           <Route path="/team" element={<Team />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/import" element={<Import />} />
           <Route path="/help" element={<Help />} />
         </Routes>
       </Layout>

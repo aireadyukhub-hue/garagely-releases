@@ -1,0 +1,6 @@
+First Name,Last Name,Email,Phone,Mobile,Address,City,Postcode,Comment
+John,Smith,john.smith@example.com,01234 567890,07700 900123,12 High Street,Leyland,PR25 2XX,"Ford Focus AB12 CDE, prefers mornings"
+Sarah,Jones,sarah.j@example.com,,07700 900456,45 Mill Lane,Chorley,PR7 1AA,
+Dave,Wilson,,01772 555111,,,,PR1 4LF,VW Golf WV58 KXY
+Emma,Brown,emma.brown@example.com,,07700 900789,8 Station Road,Preston,PR2 3BB,Regular customer
+John,Smith,john.smith@example.com,01234 567890,,,,,duplicate row test

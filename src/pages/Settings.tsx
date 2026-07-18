@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Save, CheckCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Save, CheckCircle, Download } from 'lucide-react'
 import api from '@/lib/api'
 import { Settings as SettingsType } from '@/types'
 
@@ -310,6 +311,18 @@ export default function Settings() {
                 <input className="input" value={settings.jobsheet_footer || ''} onChange={F('jobsheet_footer')} placeholder="e.g. All work guaranteed for 12 months" />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Your data */}
+        <div className="card">
+          <div className="card-header"><span className="text-sm font-medium text-zinc-300">Your Data</span></div>
+          <div className="card-body flex items-center justify-between gap-4">
+            <p className="text-xs text-zinc-500">
+              Moving from Setmore, Square or another system? Import your customers,
+              appointment history and vehicles from their export files.
+            </p>
+            <Link to="/import" className="btn-secondary shrink-0"><Download className="w-4 h-4" /> Import Data</Link>
           </div>
         </div>
 
