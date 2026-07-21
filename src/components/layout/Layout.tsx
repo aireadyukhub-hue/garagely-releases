@@ -4,7 +4,7 @@ import api from '@/lib/api'
 import {
   LayoutDashboard, Users, Car, Wrench, FileText,
   Calendar, Package, BarChart3, Settings, ChevronLeft, ChevronRight,
-  Quote, LogOut, Truck, LifeBuoy, HardHat, ListChecks, Menu, X, ClipboardCheck, Bug, Lock, LogIn
+  Quote, LogOut, Truck, LifeBuoy, HardHat, ListChecks, Menu, X, ClipboardCheck, Bug, Lock, LogIn, Megaphone
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/lib/auth'
@@ -28,6 +28,7 @@ const NAV_ITEMS = [
   { path: '/fault-codes', label: 'Fault Codes', icon: Bug },
   { path: '/suppliers', label: 'Suppliers', icon: Truck },
   { path: '/reports', label: 'Reports', icon: BarChart3 },
+  { path: '/tools/emails', label: 'Tools', icon: Megaphone },
   { path: '/settings', label: 'Settings', icon: Settings },
   { path: '/help', label: 'Help & Feedback', icon: LifeBuoy },
 ]

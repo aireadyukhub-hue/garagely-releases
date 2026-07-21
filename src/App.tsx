@@ -21,6 +21,7 @@ import Team from './pages/Team'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Import from './pages/Import'
+import Emails from './pages/Emails'
 import Help from './pages/Help'
 import Auth from './pages/Auth'
 import UpdateBanner from './components/UpdateBanner'
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/import" element={<Import />} />
+          <Route path="/tools/emails" element={<Emails />} />
           <Route path="/help" element={<Help />} />
         </Routes>
       </Layout>

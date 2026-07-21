@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search, Pencil, Trash2, ListChecks } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, ListChecks, BadgePoundSterling } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import NumberField from '@/components/ui/NumberField'
 import api from '@/lib/api'
 import { PresetJob, PresetJobItem } from '@/types'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, depositAmount } from '@/lib/utils'
 
 type EditItem = PresetJobItem
 type EditForm = {
@@ -14,9 +14,16 @@ type EditForm = {
   description: string
   labour_hours: number
   items: EditItem[]
+  deposit_required: boolean
+  deposit_type: 'fixed' | 'percent'
+  deposit_value: number
 }
 
-const EMPTY: EditForm = { name: '', category: '', description: '', labour_hours: 0, items: [{ type: 'part', description: '', quantity: 1, unit_price: 0 }] }
+const EMPTY: EditForm = {
+  name: '', category: '', description: '', labour_hours: 0,
+  items: [{ type: 'part', description: '', quantity: 1, unit_price: 0 }],
+  deposit_required: false, deposit_type: 'fixed', deposit_value: 0,
+}
 
 // Starter labour-times library — common UK jobs at typical real-world hours.
 // One-click seeds these as preset jobs (parts left blank; labour auto-prices at
@@ -52,11 +59,16 @@ export default function PresetJobs() {
   const [saving, setSaving] = useState(false)
   const [labourRate, setLabourRate] = useState(65)
   const [loading, setLoading] = useState(true)
+  const [defaultDeposit, setDefaultDeposit] = useState<{ type: 'fixed' | 'percent'; value: number }>({ type: 'fixed', value: 0 })
 
   const load = () => api.getPresetJobs().then(d => { setPresets(d as PresetJob[]); setLoading(false) })
   useEffect(() => {
     load()
-    api.getSettings().then(s => { const r = (s as { labour_rate?: number })?.labour_rate; if (r) setLabourRate(r) }).catch(() => {})
+    api.getSettings().then(s => {
+      const cfg = s as { labour_rate?: number; default_deposit_type?: 'fixed' | 'percent'; default_deposit_value?: number }
+      if (cfg?.labour_rate) setLabourRate(cfg.labour_rate)
+      setDefaultDeposit({ type: cfg?.default_deposit_type || 'fixed', value: cfg?.default_deposit_value || 0 })
+    }).catch(() => {})
   }, [])
 
   const filtered = presets.filter(p =>
@@ -71,12 +83,19 @@ export default function PresetJobs() {
 
   const [seeding, setSeeding] = useState(false)
 
-  const openNew = () => { setForm({ ...EMPTY, items: [{ type: 'part', description: '', quantity: 1, unit_price: 0 }] }); setModalOpen(true) }
+  const openNew = () => {
+    setForm({
+      ...EMPTY, items: [{ type: 'part', description: '', quantity: 1, unit_price: 0 }],
+      deposit_type: defaultDeposit.type, deposit_value: defaultDeposit.value,
+    })
+    setModalOpen(true)
+  }
   const openEdit = (p: PresetJob) => {
     setForm({
       id: p.id, name: p.name, category: p.category || '', description: p.description || '',
       labour_hours: Number(p.labour_hours) || 0,
       items: (p.items || []).map(it => ({ type: it.type, description: it.description, quantity: it.quantity, unit_price: it.unit_price })),
+      deposit_required: !!p.deposit_required, deposit_type: p.deposit_type || 'fixed', deposit_value: Number(p.deposit_value) || 0,
     })
     setModalOpen(true)
   }
@@ -107,6 +126,7 @@ export default function PresetJobs() {
       name: form.name.trim(), category: form.category.trim(), description: form.description.trim(),
       labour_hours: Number(form.labour_hours) || 0,
       items: form.items.filter(it => it.description.trim()),
+      deposit_required: form.deposit_required, deposit_type: form.deposit_type, deposit_value: Number(form.deposit_value) || 0,
     }
     if (form.id) await api.updatePresetJob(form.id, payload)
     else await api.createPresetJob(payload)
@@ -187,6 +207,14 @@ export default function PresetJobs() {
                 <span className="text-xs text-zinc-500">Total (ex VAT)</span>
                 <span className="text-sm font-semibold text-white">{formatCurrency(presetTotal(p))}</span>
               </div>
+              {p.deposit_required && (
+                <div className="px-5 py-2 border-t border-zinc-800 flex items-center gap-1.5 text-xs text-[#F4A523]">
+                  <BadgePoundSterling className="w-3.5 h-3.5" />
+                  {p.deposit_type === 'percent'
+                    ? `${p.deposit_value}% deposit (${formatCurrency(depositAmount(p, presetTotal(p)))})`
+                    : `${formatCurrency(depositAmount(p, presetTotal(p)))} deposit to book`}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -212,6 +240,30 @@ export default function PresetJobs() {
             <div className="flex items-end">
               <p className="text-xs text-zinc-500 pb-2">Auto-prices at your labour rate (£{labourRate}/hr) when added to a quote = <span className="text-zinc-300 font-medium">{formatCurrency((Number(form.labour_hours) || 0) * labourRate)}</span></p>
             </div>
+          </div>
+
+          <div className="p-3 rounded-lg border border-zinc-800 bg-zinc-900/40 space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-zinc-300">
+              <input type="checkbox" checked={form.deposit_required}
+                onChange={e => setForm(f => ({ ...f, deposit_required: e.target.checked }))}
+                className="accent-[#F4A523] w-4 h-4" />
+              Require a deposit to book this job
+            </label>
+            {form.deposit_required && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="label">Type</label>
+                  <select className="select" value={form.deposit_type} onChange={e => setForm(f => ({ ...f, deposit_type: e.target.value as 'fixed' | 'percent' }))}>
+                    <option value="fixed">Fixed amount (£)</option>
+                    <option value="percent">Percentage of total</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label">{form.deposit_type === 'percent' ? 'Percent (%)' : 'Amount (£)'}</label>
+                  <NumberField className="input" value={form.deposit_value} onChange={n => setForm(f => ({ ...f, deposit_value: n }))} />
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

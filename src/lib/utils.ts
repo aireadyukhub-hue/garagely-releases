@@ -89,6 +89,17 @@ export const QUOTE_STATUS_COLORS: Record<string, string> = {
   converted: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
 }
 
+/** Deposit owed for a job/preset given its total value (ex VAT). */
+export function depositAmount(
+  deposit: { deposit_required?: boolean; deposit_type?: 'fixed' | 'percent'; deposit_value?: number },
+  total: number,
+): number {
+  if (!deposit.deposit_required) return 0
+  const val = Number(deposit.deposit_value) || 0
+  if (deposit.deposit_type === 'percent') return Math.round(total * (val / 100) * 100) / 100
+  return val
+}
+
 export function calcTotals(subtotal: number, vatRate: number) {
   const vat_amount = Math.round(subtotal * (vatRate / 100) * 100) / 100
   const total = Math.round((subtotal + vat_amount) * 100) / 100

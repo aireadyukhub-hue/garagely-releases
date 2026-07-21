@@ -11,7 +11,12 @@
  * already-installed desktop app) keep working without a rebuild.
  *
  * Endpoints: activate-account, validate-licence, create-checkout,
- *            get-key-by-session, stripe-webhook, admin-api
+ *            get-key-by-session, stripe-webhook, admin-api, send-email,
+ *            run-reminders-now
+ *
+ * Plus a Cron Trigger (see wrangler.toml [triggers]) that runs once a day to
+ * send due booking reminders (booking_reminder_rules) and scheduled email
+ * campaigns (email_campaigns) — see runScheduledEmails() below.
  *
  * Config (set via `wrangler secret put` unless noted as a [vars] entry):
  *   SUPABASE_URL                (var)    e.g. https://xxxx.supabase.co
@@ -121,6 +126,8 @@ export default {
         case 'assistant':          return await assistant(request, env)
         case 'places-search':      return await placesSearch(request, env)
         case 'admin-api':          return await adminApi(request, env, url)
+        case 'send-email':         return await sendEmailEndpoint(request, env)
+        case 'run-reminders-now':  return await runRemindersNow(request, env)
         case '':
         case 'health':             return json(200, { ok: true, service: 'garagely-backend' })
         default:                   return json(404, { error: `Unknown endpoint: ${name}` })
@@ -129,6 +136,12 @@ export default {
       console.error(`Handler ${name} threw:`, err?.message || err)
       return json(500, { error: 'Internal error' })
     }
+  },
+
+  // Cloudflare Cron Trigger (see wrangler.toml [triggers]) — runs once a day.
+  // Sends any due booking reminders + scheduled campaigns for every garage.
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runScheduledEmails(env))
   },
 }
 
@@ -543,6 +556,277 @@ async function sendResetEmail(env: Env, to: string, link: string): Promise<void>
     if (!res.ok) console.error('Resend reset error:', res.status, await res.text())
   } catch (err) {
     console.error('Reset email failed:', (err as Error).message)
+  }
+}
+
+// ── send-email / booking reminders / campaigns ────────────────────────────────
+// Powers three garage-facing features, all sent via the same Resend account
+// used for admin emails above, but "From" shows the garage's own name and
+// "Reply-To" is the garage's own email so customer replies land with them.
+
+function escHtml(s: unknown): string {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+function nl2br(s: string): string {
+  return escHtml(s).replace(/\n/g, '<br>')
+}
+// Replaces {{token}} placeholders — used in reminder rules and campaign bodies.
+function renderTemplate(str: string, vars: Record<string, string>): string {
+  return String(str || '').replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] ?? '')
+}
+function fromHeader(env: Env, garageName?: string): string {
+  const base = env.RESEND_FROM || 'GarageDash <info@garagedash.co.uk>'
+  const addr = base.match(/<(.+)>/)?.[1] || base
+  return garageName ? `${garageName} (via GarageDash) <${addr}>` : base
+}
+function brandedEmailHtml(garageName: string, bodyHtml: string): string {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#111">
+      <h2 style="color:#F4A523;margin-bottom:4px">${escHtml(garageName)}</h2>
+      <div style="font-size:14px;line-height:1.6;color:#222">${bodyHtml}</div>
+      <p style="color:#999;font-size:11px;margin-top:24px;border-top:1px solid #eee;padding-top:10px">
+        Sent via GarageDash on behalf of ${escHtml(garageName)}.
+      </p>
+    </div>`
+}
+function defaultReminderSubject(garageName: string): string {
+  return `Reminder: your booking with ${garageName}`
+}
+function defaultReminderMessage(): string {
+  return 'Hi {{first_name}},\n\nJust a reminder that you\'re booked in with us:\n\n{{date}} at {{time}} — {{vehicle}}\n\n'
+    + 'If you need to change anything, just reply to this email or give us a call.\n\nSee you then!\n{{garage_name}}'
+}
+
+async function resendSend(env: Env, opts: { to: string; subject: string; html: string; from: string; replyTo?: string }): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = env.RESEND_API_KEY
+  if (!apiKey) return { ok: false, error: 'Email sending is not set up yet (needs RESEND_API_KEY on the Worker).' }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: opts.from, to: [opts.to], subject: opts.subject, html: opts.html,
+        ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
+      }),
+    })
+    if (!res.ok) return { ok: false, error: `Resend error ${res.status}: ${await res.text()}` }
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: (err as Error).message }
+  }
+}
+
+// Customers eligible for a campaign — 'all' (with an email) or a hand-picked list.
+async function resolveAudience(supabase: SupabaseClient, garageId: number, camp: any): Promise<Array<{ id: number; first_name: string; email: string }>> {
+  let q = supabase.from('customers').select('id,first_name,last_name,email').eq('garage_id', garageId).not('email', 'is', null).neq('email', '')
+  if (camp.audience === 'custom') {
+    const ids: number[] = camp.audience_filter?.customer_ids || []
+    if (!ids.length) return []
+    q = q.in('id', ids)
+  }
+  const { data } = await q
+  return (data || []) as any
+}
+
+// Sends one booking-reminder email and logs it (race-safe: a duplicate insert
+// from the unique index is treated as "already sent", not an error).
+async function sendOneBookingReminder(
+  env: Env, supabase: SupabaseClient, garageId: number, garageName: string,
+  replyTo: string | undefined, from: string, booking: any, rule: any,
+): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
+  const cust = booking.customers
+  const veh = booking.vehicles
+  if (!cust?.email) return { ok: false, error: 'No customer email on file' }
+  const dt = new Date(booking.start_time)
+  const vars = {
+    first_name: cust.first_name || '',
+    date: dt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }),
+    time: dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    vehicle: [veh?.registration, veh?.make, veh?.model].filter(Boolean).join(' — '),
+    garage_name: garageName,
+  }
+  const subject = renderTemplate(rule.subject || defaultReminderSubject(garageName), vars)
+  const html = brandedEmailHtml(garageName, nl2br(renderTemplate(rule.message || defaultReminderMessage(), vars)))
+  const r = await resendSend(env, { to: cust.email, subject, html, from, replyTo })
+  const { error: logErr } = await supabase.from('email_log').insert({
+    garage_id: garageId, kind: 'booking_reminder', customer_id: booking.customer_id, booking_id: booking.id,
+    rule_id: rule.id, to_email: cust.email, subject, success: r.ok, error: r.ok ? null : r.error,
+  })
+  if (logErr && (logErr as any).code === '23505') return { ok: true, skipped: true }
+  return r
+}
+
+// POST /send-email — the one endpoint behind: the customer-page "Send Email"
+// button, campaign "Send Now", the Settings "Test" preview, and a manual
+// per-booking reminder send. All require a signed-in user; each action is
+// scoped to that user's own garage.
+async function sendEmailEndpoint(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'POST') return json(405, { error: 'Method not allowed' })
+  const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
+  if (!token) return json(401, { error: 'Please sign in.' })
+  const supabase = sb(env)
+  const { data: u, error: authErr } = await supabase.auth.getUser(token)
+  if (authErr || !u?.user) return json(401, { error: 'Your session expired — sign in again.' })
+  const mem = await supabase.from('garage_members').select('garage_id').eq('user_id', u.user.id).limit(1).maybeSingle()
+  const garageId = mem.data?.garage_id
+  if (!garageId) return json(400, { error: 'No garage found for this account.' })
+  if (!env.RESEND_API_KEY) return json(400, { error: 'Email sending is not set up yet (needs RESEND_API_KEY on the Worker).' })
+
+  const settings = (await supabase.from('settings').select('business_name,email').eq('garage_id', garageId).maybeSingle()).data as any
+  const garageName = settings?.business_name || 'Your garage'
+  const replyTo = settings?.email || undefined
+  const from = fromHeader(env, garageName)
+
+  let body: any = {}
+  try { body = await request.json() } catch { return json(400, { error: 'Invalid request' }) }
+  const type = String(body.type || '')
+
+  if (type === 'custom') {
+    const customerId = Number(body.customer_id)
+    const subject = String(body.subject || '').trim()
+    const message = String(body.body || '').trim()
+    if (!customerId || !subject || !message) return json(400, { error: 'customer_id, subject and body are required' })
+    const cust = (await supabase.from('customers').select('id,first_name,email').eq('id', customerId).eq('garage_id', garageId).maybeSingle()).data as any
+    if (!cust) return json(404, { error: 'Customer not found' })
+    if (!cust.email) return json(400, { error: 'This customer has no email address on file.' })
+    const html = brandedEmailHtml(garageName, nl2br(renderTemplate(message, { first_name: cust.first_name || '', garage_name: garageName })))
+    const r = await resendSend(env, { to: cust.email, subject, html, from, replyTo })
+    await supabase.from('email_log').insert({
+      garage_id: garageId, kind: 'custom', customer_id: cust.id, to_email: cust.email, subject,
+      success: r.ok, error: r.ok ? null : r.error,
+    })
+    if (!r.ok) return json(502, { error: r.error })
+    return json(200, { success: true })
+  }
+
+  if (type === 'campaign') {
+    const campaignId = Number(body.campaign_id)
+    const camp = (await supabase.from('email_campaigns').select('*').eq('id', campaignId).eq('garage_id', garageId).maybeSingle()).data as any
+    if (!camp) return json(404, { error: 'Email not found' })
+    const recipients = await resolveAudience(supabase, garageId, camp)
+    let sent = 0
+    for (const c of recipients) {
+      const subject = renderTemplate(camp.subject, { first_name: c.first_name || '', garage_name: garageName })
+      const html = brandedEmailHtml(garageName, nl2br(renderTemplate(camp.body, { first_name: c.first_name || '', garage_name: garageName })))
+      const r = await resendSend(env, { to: c.email, subject, html, from, replyTo })
+      await supabase.from('email_log').insert({
+        garage_id: garageId, kind: 'campaign', customer_id: c.id, campaign_id: campaignId, to_email: c.email, subject,
+        success: r.ok, error: r.ok ? null : r.error,
+      })
+      if (r.ok) sent++
+    }
+    await supabase.from('email_campaigns').update({ status: 'sent', sent_at: new Date().toISOString(), recipient_count: sent }).eq('id', campaignId)
+    return json(200, { success: true, sent })
+  }
+
+  if (type === 'booking_reminder' || type === 'test_reminder_rule') {
+    const ruleId = Number(body.rule_id)
+    const rule = (await supabase.from('booking_reminder_rules').select('*').eq('id', ruleId).eq('garage_id', garageId).maybeSingle()).data as any
+    if (!rule) return json(404, { error: 'Reminder rule not found' })
+
+    if (type === 'test_reminder_rule') {
+      if (!replyTo) return json(400, { error: 'Add a business email in Settings first so we know where to send the test.' })
+      const vars = { first_name: 'there', date: 'Mon 3 Aug', time: '09:00', vehicle: 'AB12 CDE — Ford Focus', garage_name: garageName }
+      const subject = renderTemplate(rule.subject || defaultReminderSubject(garageName), vars)
+      const html = brandedEmailHtml(
+        garageName,
+        nl2br(renderTemplate(rule.message || defaultReminderMessage(), vars))
+        + '<p style="color:#999;font-size:11px">(Preview — this is what a real reminder looks like.)</p>',
+      )
+      const r = await resendSend(env, { to: replyTo, subject: `[Test] ${subject}`, html, from })
+      if (!r.ok) return json(502, { error: r.error })
+      return json(200, { success: true })
+    }
+
+    const bookingId = Number(body.booking_id)
+    const booking = (await supabase.from('bookings')
+      .select('*, customers(first_name,last_name,email), vehicles(registration,make,model)')
+      .eq('id', bookingId).eq('garage_id', garageId).maybeSingle()).data as any
+    if (!booking) return json(404, { error: 'Booking not found' })
+    if (!booking.customers?.email) return json(400, { error: 'This booking has no customer email on file.' })
+    const r = await sendOneBookingReminder(env, supabase, garageId, garageName, replyTo, from, booking, rule)
+    if (!r.ok) return json(502, { error: r.error })
+    return json(200, { success: true })
+  }
+
+  return json(400, { error: `Unknown type: ${type}` })
+}
+
+// Manual trigger for the daily job (troubleshooting/testing without waiting
+// for the Cron Trigger, or on a Workers plan where cron isn't enabled yet).
+// Protected the same way as admin-api.
+async function runRemindersNow(request: Request, env: Env): Promise<Response> {
+  const secret = request.headers.get('X-Admin-Secret') || ''
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) return json(401, { error: 'Unauthorized' })
+  await runScheduledEmails(env)
+  return json(200, { success: true })
+}
+
+// The daily job itself — every active reminder rule × every garage, plus any
+// campaigns whose scheduled_at has arrived. Runs with the service-role key so
+// it can see every garage in one pass (RLS would otherwise scope to one user).
+async function runScheduledEmails(env: Env): Promise<void> {
+  if (!env.RESEND_API_KEY) {
+    console.log('Scheduled emails skipped — RESEND_API_KEY not configured')
+    return
+  }
+  const supabase = sb(env)
+  const settingsCache = new Map<number, any>()
+  const getSettings = async (garageId: number) => {
+    if (!settingsCache.has(garageId)) {
+      const { data } = await supabase.from('settings').select('business_name,email,booking_reminders_enabled').eq('garage_id', garageId).maybeSingle()
+      settingsCache.set(garageId, data)
+    }
+    return settingsCache.get(garageId)
+  }
+
+  // ── Booking reminders ────────────────────────────────────────────────────
+  const { data: rules } = await supabase.from('booking_reminder_rules').select('*').eq('active', true)
+  for (const rule of (rules || []) as any[]) {
+    const settings = await getSettings(rule.garage_id)
+    if (!settings || settings.booking_reminders_enabled === false) continue
+    const target = new Date()
+    target.setUTCDate(target.getUTCDate() + Number(rule.days_before || 0))
+    const targetDate = target.toISOString().slice(0, 10)
+    const garageName = settings.business_name || 'Your garage'
+    const from = fromHeader(env, garageName)
+
+    const { data: bookings } = await supabase
+      .from('bookings')
+      .select('*, customers(first_name,last_name,email), vehicles(registration,make,model)')
+      .eq('garage_id', rule.garage_id)
+      .neq('status', 'cancelled')
+      .gte('start_time', `${targetDate}T00:00:00`)
+      .lt('start_time', `${targetDate}T23:59:59`)
+
+    for (const booking of (bookings || []) as any[]) {
+      if (!booking.customers?.email) continue
+      const already = await supabase.from('email_log').select('id').eq('booking_id', booking.id).eq('rule_id', rule.id).maybeSingle()
+      if (already.data) continue
+      await sendOneBookingReminder(env, supabase, rule.garage_id, garageName, settings.email || undefined, from, booking, rule)
+    }
+  }
+
+  // ── Scheduled campaigns (newsletters) ────────────────────────────────────
+  const nowIso = new Date().toISOString()
+  const { data: due } = await supabase.from('email_campaigns').select('*').eq('status', 'scheduled').lte('scheduled_at', nowIso)
+  for (const camp of (due || []) as any[]) {
+    const settings = await getSettings(camp.garage_id)
+    const garageName = settings?.business_name || 'Your garage'
+    const from = fromHeader(env, garageName)
+    const recipients = await resolveAudience(supabase, camp.garage_id, camp)
+    let sent = 0
+    for (const c of recipients) {
+      const subject = renderTemplate(camp.subject, { first_name: c.first_name || '', garage_name: garageName })
+      const html = brandedEmailHtml(garageName, nl2br(renderTemplate(camp.body, { first_name: c.first_name || '', garage_name: garageName })))
+      const r = await resendSend(env, { to: c.email, subject, html, from, replyTo: settings?.email || undefined })
+      await supabase.from('email_log').insert({
+        garage_id: camp.garage_id, kind: 'campaign', customer_id: c.id, campaign_id: camp.id, to_email: c.email, subject,
+        success: r.ok, error: r.ok ? null : r.error,
+      })
+      if (r.ok) sent++
+    }
+    await supabase.from('email_campaigns').update({ status: 'sent', sent_at: nowIso, recipient_count: sent }).eq('id', camp.id)
   }
 }
 

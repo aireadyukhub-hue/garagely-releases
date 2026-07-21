@@ -720,6 +720,113 @@ const api = {
     return settingsRow()
   },
 
+  // ─── Booking reminder rules ───────────────────────────────────────────────
+  getReminderRules: () =>
+    cached('reminderRules', async () =>
+      unwrap(await supabase.from('booking_reminder_rules').select('*').order('days_before', { ascending: false })),
+    ),
+
+  createReminderRule: async (data: any) => {
+    const garage_id = await getGarageId()
+    return unwrap(await supabase.from('booking_reminder_rules').insert({ ...data, garage_id }).select().single())
+  },
+
+  updateReminderRule: async (id: number, data: any) => {
+    const { id: _omit, ...rest } = data ?? {}
+    return unwrap(await supabase.from('booking_reminder_rules').update(rest).eq('id', id).select().single())
+  },
+
+  deleteReminderRule: async (id: number) => {
+    unwrap(await supabase.from('booking_reminder_rules').delete().eq('id', id).select())
+    return { success: true }
+  },
+
+  // ─── Email campaigns (event blasts / scheduled newsletters) ──────────────
+  getCampaigns: () =>
+    cached('campaigns', async () =>
+      unwrap(await supabase.from('email_campaigns').select('*').order('created_at', { ascending: false })),
+    ),
+
+  createCampaign: async (data: any) => {
+    const garage_id = await getGarageId()
+    return unwrap(await supabase.from('email_campaigns').insert({ ...data, garage_id }).select().single())
+  },
+
+  updateCampaign: async (id: number, data: any) => {
+    const { id: _omit, ...rest } = data ?? {}
+    return unwrap(await supabase.from('email_campaigns').update(rest).eq('id', id).select().single())
+  },
+
+  deleteCampaign: async (id: number) => {
+    unwrap(await supabase.from('email_campaigns').delete().eq('id', id).select())
+    return { success: true }
+  },
+
+  // Ask the Worker to send a campaign right now (ignores scheduled_at).
+  sendCampaignNow: async (id: number) => {
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    const res = await fetch(`${BACKEND}/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ type: 'campaign', campaign_id: id }),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((j as { error?: string }).error || 'Could not send campaign')
+    return j as { success: true; sent: number }
+  },
+
+  // ─── One-off customer email ────────────────────────────────────────────────
+  sendCustomerEmail: async (customerId: number, subject: string, body: string) => {
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    const res = await fetch(`${BACKEND}/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ type: 'custom', customer_id: customerId, subject, body }),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((j as { error?: string }).error || 'Could not send email')
+    return j as { success: true }
+  },
+
+  // Send yourself a preview of a reminder rule (uses the garage's own email).
+  sendTestReminder: async (ruleId: number) => {
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    const res = await fetch(`${BACKEND}/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ type: 'test_reminder_rule', rule_id: ruleId }),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((j as { error?: string }).error || 'Could not send test email')
+    return j as { success: true }
+  },
+
+  // Manually send an individual booking's reminder right now (any active rule).
+  sendBookingReminderNow: async (bookingId: number, ruleId: number) => {
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    const res = await fetch(`${BACKEND}/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ type: 'booking_reminder', booking_id: bookingId, rule_id: ruleId }),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((j as { error?: string }).error || 'Could not send reminder')
+    return j as { success: true }
+  },
+
+  // ─── Email log (audit trail for the Emails/Tools page + customer page) ───
+  getEmailLog: (filters?: { customerId?: number; limit?: number }) =>
+    cached(`emailLog:${JSON.stringify(filters ?? {})}`, async () => {
+      let q = supabase.from('email_log').select('*').order('sent_at', { ascending: false })
+      if (filters?.customerId) q = q.eq('customer_id', filters.customerId)
+      q = q.limit(filters?.limit ?? 50)
+      return unwrap(await q)
+    }),
+
   // ─── Demo mode ────────────────────────────────────────────────────────────
   endDemoMode: async () => {
     unwrap(await supabase.rpc('end_demo_mode'))

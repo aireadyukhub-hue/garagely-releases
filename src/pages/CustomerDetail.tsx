@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Edit2, Trash2, Plus, Phone, Mail, MapPin, Car, Wrench } from 'lucide-react'
+import { ArrowLeft, Edit2, Trash2, Phone, Mail, MapPin, Car, Wrench, Send } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import CallButton from '@/components/CallButton'
 import api from '@/lib/api'
-import { Customer, Vehicle, Job } from '@/types'
-import { formatDate, JOB_STATUS_COLORS, JOB_STATUS_LABELS } from '@/lib/utils'
+import { Customer, Vehicle, Job, EmailLogEntry } from '@/types'
+import { formatDate, formatDateTime, JOB_STATUS_COLORS, JOB_STATUS_LABELS } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
 export default function CustomerDetail() {
@@ -18,6 +18,11 @@ export default function CustomerDetail() {
   const [form, setForm] = useState<Partial<Customer>>({})
   const [saving, setSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [emailForm, setEmailForm] = useState({ subject: '', body: '' })
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const [emailLog, setEmailLog] = useState<EmailLogEntry[]>([])
 
   const load = () => api.getCustomer(Number(id)).then((d: unknown) => {
     const data = d as { customer: Customer; vehicles: Vehicle[]; jobs: Job[] }
@@ -27,7 +32,25 @@ export default function CustomerDetail() {
     setForm(data.customer)
   })
 
-  useEffect(() => { load() }, [id])
+  useEffect(() => {
+    load()
+    api.getEmailLog({ customerId: Number(id), limit: 5 }).then(d => setEmailLog(d as EmailLogEntry[])).catch(() => {})
+  }, [id])
+
+  const openEmail = () => { setEmailForm({ subject: '', body: '' }); setEmailSent(false); setEmailOpen(true) }
+  const handleSendEmail = async () => {
+    if (!customer || !emailForm.subject.trim() || !emailForm.body.trim()) return
+    setSendingEmail(true)
+    try {
+      await api.sendCustomerEmail(customer.id, emailForm.subject.trim(), emailForm.body.trim())
+      setEmailSent(true)
+      api.getEmailLog({ customerId: Number(id), limit: 5 }).then(d => setEmailLog(d as EmailLogEntry[])).catch(() => {})
+    } catch (e) {
+      alert((e as Error).message)
+    } finally {
+      setSendingEmail(false)
+    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -61,6 +84,11 @@ export default function CustomerDetail() {
           <h1 className="page-title">{customer.first_name} {customer.last_name}</h1>
           <p className="text-sm text-zinc-500">Customer since {formatDate(customer.created_at)}</p>
         </div>
+        {customer.email && (
+          <button onClick={openEmail} className="btn-secondary">
+            <Send className="w-4 h-4" /> Send Email
+          </button>
+        )}
         <button onClick={() => setEditOpen(true)} className="btn-secondary">
           <Edit2 className="w-4 h-4" /> Edit
         </button>
@@ -107,6 +135,19 @@ export default function CustomerDetail() {
               <div className="pt-2 border-t border-zinc-800">
                 <p className="text-xs text-zinc-500 mb-1">Notes</p>
                 <p className="text-sm text-zinc-300">{customer.notes}</p>
+              </div>
+            )}
+            {emailLog.length > 0 && (
+              <div className="pt-2 border-t border-zinc-800">
+                <p className="text-xs text-zinc-500 mb-1.5">Recent emails</p>
+                <div className="space-y-1.5">
+                  {emailLog.map(e => (
+                    <div key={e.id} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-zinc-300 truncate">{e.subject}</span>
+                      <span className="text-zinc-600 shrink-0">{formatDateTime(e.sent_at)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -206,6 +247,32 @@ export default function CustomerDetail() {
           </div>
           <div><label className="label">Notes</label><textarea className="textarea" rows={3} value={form.notes || ''} onChange={F('notes')} /></div>
         </div>
+      </Modal>
+
+      {/* Send email */}
+      <Modal open={emailOpen} onClose={() => setEmailOpen(false)} title={`Email ${customer.first_name} ${customer.last_name}`}
+        footer={
+          emailSent ? (
+            <button onClick={() => setEmailOpen(false)} className="btn-primary">Done</button>
+          ) : (
+            <>
+              <button onClick={() => setEmailOpen(false)} className="btn-secondary">Cancel</button>
+              <button onClick={handleSendEmail} disabled={sendingEmail || !emailForm.subject.trim() || !emailForm.body.trim()} className="btn-primary">
+                <Send className="w-4 h-4" /> {sendingEmail ? 'Sending…' : 'Send'}
+              </button>
+            </>
+          )
+        }
+      >
+        {emailSent ? (
+          <p className="text-sm text-green-400">Sent to {customer.email}.</p>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-zinc-500">Sending to <span className="text-zinc-300">{customer.email}</span></p>
+            <div><label className="label">Subject</label><input className="input" value={emailForm.subject} onChange={e => setEmailForm(f => ({ ...f, subject: e.target.value }))} /></div>
+            <div><label className="label">Message</label><textarea className="textarea" rows={6} value={emailForm.body} onChange={e => setEmailForm(f => ({ ...f, body: e.target.value }))} placeholder={`Hi ${customer.first_name},`} /></div>
+          </div>
+        )}
       </Modal>
 
       {/* Delete confirm */}

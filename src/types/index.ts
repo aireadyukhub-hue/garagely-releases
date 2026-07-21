@@ -55,6 +55,12 @@ export interface Job {
   started_date: string
   completed_date: string
   total_value?: number
+  // deposits
+  deposit_required?: boolean
+  deposit_type?: 'fixed' | 'percent'
+  deposit_value?: number
+  deposit_paid?: boolean
+  deposit_paid_date?: string
   // joined
   first_name?: string
   last_name?: string
@@ -197,6 +203,53 @@ export interface Settings {
   opening_hours?: Record<string, { open: boolean; from: string; to: string }>
   // Technician Mode PIN ('' = disabled)
   tech_pin?: string
+  // Booking reminders + deposit defaults
+  booking_reminders_enabled?: boolean
+  default_deposit_type?: 'fixed' | 'percent'
+  default_deposit_value?: number
+}
+
+export interface BookingReminderRule {
+  id: number
+  days_before: number
+  active: boolean
+  subject?: string
+  message?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed' | 'cancelled'
+export type CampaignAudience = 'all' | 'custom'
+
+export interface EmailCampaign {
+  id: number
+  subject: string
+  body: string
+  audience: CampaignAudience
+  audience_filter?: { customer_ids?: number[] }
+  status: CampaignStatus
+  scheduled_at: string | null
+  sent_at: string | null
+  recipient_count: number
+  created_at?: string
+  updated_at?: string
+}
+
+export type EmailKind = 'custom' | 'booking_reminder' | 'campaign'
+
+export interface EmailLogEntry {
+  id: number
+  kind: EmailKind
+  customer_id?: number | null
+  booking_id?: number | null
+  rule_id?: number | null
+  campaign_id?: number | null
+  to_email: string
+  subject: string
+  success: boolean
+  error?: string | null
+  sent_at: string
 }
 
 export interface PresetJobItem {
@@ -218,6 +271,10 @@ export interface PresetJob {
   active?: boolean
   sort_order?: number
   items: PresetJobItem[]
+  // deposits
+  deposit_required?: boolean
+  deposit_type?: 'fixed' | 'percent'
+  deposit_value?: number
   created_at?: string
   updated_at?: string
 }

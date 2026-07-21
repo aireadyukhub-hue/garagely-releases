@@ -17,3 +17,8 @@ TRIAL_DAYS = "14"
 STRIPE_PRICE_ID = "price_1TjmjIHuEMj7eABe0lLdMQfN"   # the live subscription price id
 SITE_URL = "https://garagedash.co.uk"           # marketing site URL (Stripe redirects)
 RESEND_FROM = "GarageDash <info@garagedash.co.uk>"  # verified sender — garagedash.co.uk verified in Resend 6 Jul 2026
+
+# Booking reminders + scheduled newsletters — runs once a day (07:00 UTC).
+# Sends any due reminder rules / scheduled campaigns for every garage.
+[triggers]
+crons = ["0 7 * * *"]

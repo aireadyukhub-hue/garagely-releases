@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Save, CheckCircle, Download } from 'lucide-react'
+import { Save, CheckCircle, Download, Plus, Trash2, Send, Bell, BadgePoundSterling } from 'lucide-react'
 import api from '@/lib/api'
-import { Settings as SettingsType } from '@/types'
+import { Settings as SettingsType, BookingReminderRule } from '@/types'
 
 const DAYS_OH = [
   ['mon', 'Monday'], ['tue', 'Tuesday'], ['wed', 'Wednesday'], ['thu', 'Thursday'],
@@ -24,6 +24,9 @@ export default function Settings() {
   const [settings, setSettings] = useState<Partial<SettingsType>>({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [rules, setRules] = useState<BookingReminderRule[]>([])
+  const [rulesLoading, setRulesLoading] = useState(true)
+  const [testingRule, setTestingRule] = useState<number | null>(null)
 
   useEffect(() => {
     api.getSettings().then(d => {
@@ -33,7 +36,39 @@ export default function Settings() {
       }
       setSettings(s)
     })
+    loadRules()
   }, [])
+
+  const loadRules = () =>
+    api.getReminderRules().then(d => { setRules(d as BookingReminderRule[]); setRulesLoading(false) })
+
+  const addRule = async () => {
+    await api.createReminderRule({ days_before: 3, active: true, subject: '', message: '' })
+    await loadRules()
+  }
+  const patchRule = (id: number, patch: Partial<BookingReminderRule>) =>
+    setRules(rs => rs.map(r => r.id === id ? { ...r, ...patch } : r))
+  const saveRule = async (rule: BookingReminderRule) => {
+    await api.updateReminderRule(rule.id, {
+      days_before: rule.days_before, active: rule.active, subject: rule.subject, message: rule.message,
+    })
+  }
+  const removeRule = async (id: number) => {
+    if (!confirm('Remove this reminder rule?')) return
+    await api.deleteReminderRule(id)
+    await loadRules()
+  }
+  const sendTest = async (id: number) => {
+    setTestingRule(id)
+    try {
+      await api.sendTestReminder(id)
+      alert(`Test reminder sent to ${settings.email || 'your business email'}.`)
+    } catch (e) {
+      alert((e as Error).message)
+    } finally {
+      setTestingRule(null)
+    }
+  }
 
   const oh = ((settings as { opening_hours?: OpeningHours }).opening_hours) || DEFAULT_OH
   const setOH = (day: string, patch: Partial<DayHours>) =>
@@ -75,7 +110,7 @@ export default function Settings() {
     reader.readAsDataURL(file)
   }
 
-  const NUMERIC = ['vat_rate', 'labour_rate', 'invoice_next', 'quote_next', 'reminder_lead_days']
+  const NUMERIC = ['vat_rate', 'labour_rate', 'invoice_next', 'quote_next', 'reminder_lead_days', 'default_deposit_value']
   const F = (field: keyof SettingsType) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setSettings(s => ({ ...s, [field]: NUMERIC.includes(field) ? Number(e.target.value) : e.target.value }))
   // Text-area / select handler (no numeric coercion).
@@ -280,6 +315,92 @@ export default function Settings() {
             <div>
               <label className="label">Bank details (shown on invoices)</label>
               <textarea className="textarea" rows={3} value={settings.bank_details || ''} onChange={T('bank_details')} placeholder={'Sort code: 00-00-00\nAccount: 00000000\nName: …'} />
+            </div>
+          </div>
+        </div>
+
+        {/* Booking reminders */}
+        <div className="card">
+          <div className="card-header flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-300 flex items-center gap-2"><Bell className="w-4 h-4" /> Booking Reminders</span>
+            <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-400">
+              <input type="checkbox" checked={settings.booking_reminders_enabled ?? true}
+                onChange={e => setSettings(s => ({ ...s, booking_reminders_enabled: e.target.checked }))}
+                className="accent-[#F4A523] w-4 h-4" />
+              Enabled
+            </label>
+          </div>
+          <div className="card-body space-y-3">
+            <p className="text-xs text-zinc-500">
+              Automatic emails sent to the customer ahead of a booked appointment — set as
+              many rules as you like (e.g. one 10 days before, another 3 days before). Sent
+              once per booking per rule, every day, by the backend — no need to click anything.
+              Leave subject/message blank on a rule to use the default wording.
+            </p>
+            {rulesLoading ? (
+              <p className="text-xs text-zinc-600">Loading…</p>
+            ) : (
+              <div className="space-y-3">
+                {rules.map(rule => (
+                  <div key={rule.id} className="p-3 rounded-lg border border-zinc-800 bg-zinc-900/40 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-400 shrink-0">
+                        <input type="checkbox" checked={rule.active}
+                          onChange={e => { patchRule(rule.id, { active: e.target.checked }); saveRule({ ...rule, active: e.target.checked }) }}
+                          className="accent-[#F4A523] w-4 h-4" />
+                        Active
+                      </label>
+                      <input type="number" min={0} max={60} className="input py-1.5 w-20 text-center"
+                        value={rule.days_before}
+                        onChange={e => patchRule(rule.id, { days_before: Number(e.target.value) })}
+                        onBlur={() => saveRule(rule)} />
+                      <span className="text-xs text-zinc-500">days before the booking</span>
+                      <div className="ml-auto flex items-center gap-1">
+                        <button onClick={() => sendTest(rule.id)} disabled={testingRule === rule.id}
+                          className="btn-ghost text-xs py-1 px-2 text-blue-400" title="Send a preview to your business email">
+                          <Send className="w-3.5 h-3.5" /> {testingRule === rule.id ? 'Sending…' : 'Test'}
+                        </button>
+                        <button onClick={() => removeRule(rule.id)} className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-zinc-800" title="Remove">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <input className="input py-1.5 text-xs" placeholder="Custom subject (optional — default: your booking reminder)"
+                      value={rule.subject || ''} onChange={e => patchRule(rule.id, { subject: e.target.value })} onBlur={() => saveRule(rule)} />
+                    <textarea className="textarea text-xs" rows={2} placeholder="Custom message (optional — default template mentions the date, time & vehicle)"
+                      value={rule.message || ''} onChange={e => patchRule(rule.id, { message: e.target.value })} onBlur={() => saveRule(rule)} />
+                  </div>
+                ))}
+                {rules.length === 0 && <p className="text-xs text-zinc-600">No reminder rules yet.</p>}
+                <button onClick={addRule} className="btn-secondary text-xs py-1.5 px-3"><Plus className="w-3.5 h-3.5" /> Add reminder rule</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Booking deposits */}
+        <div className="card">
+          <div className="card-header"><span className="text-sm font-medium text-zinc-300 flex items-center gap-2"><BadgePoundSterling className="w-4 h-4" /> Booking Deposits</span></div>
+          <div className="card-body space-y-3">
+            <p className="text-xs text-zinc-500">
+              Default used when a new preset job is created. Each preset job in{' '}
+              <Link to="/preset-jobs" className="text-blue-400 hover:text-blue-300">Preset Jobs</Link>{' '}
+              can override this — e.g. a flat £50 to lock in the diary for most jobs, but 20% for
+              bigger work.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="label">Default deposit type</label>
+                <select className="select" value={settings.default_deposit_type || 'fixed'} onChange={T('default_deposit_type')}>
+                  <option value="fixed">Fixed amount (£)</option>
+                  <option value="percent">Percentage of job total</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Default deposit value</label>
+                <input type="number" step="0.5" className="input" value={settings.default_deposit_value ?? 0} onChange={F('default_deposit_value')}
+                  placeholder={settings.default_deposit_type === 'percent' ? 'e.g. 20' : 'e.g. 50'} />
+              </div>
             </div>
           </div>
         </div>
